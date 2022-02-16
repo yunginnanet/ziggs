@@ -1,0 +1,38 @@
+package huego
+
+import (
+	"testing"
+)
+
+func TestGetCapabilities(t *testing.T) {
+	b := New(hostname, username)
+	c, err := b.GetCapabilities()
+	if err != nil {
+		t.Fatal(c)
+	}
+	t.Log("Capabilities:")
+	t.Log("  Groups")
+	t.Logf("    Available: %d", c.Groups.Available)
+	t.Log("  Lights")
+	t.Logf("    Available: %d", c.Lights.Available)
+	t.Log("  Resourcelinks")
+	t.Logf("    Available: %d", c.Resourcelinks.Available)
+	t.Log("  Schedules")
+	t.Logf("    Available: %d", c.Schedules.Available)
+	t.Log("  Rules")
+	t.Logf("    Available: %d", c.Rules.Available)
+	t.Log("  Scenes")
+	t.Logf("    Available: %d", c.Scenes.Available)
+	t.Log("  Sensors")
+	t.Logf("    Available: %d", c.Sensors.Available)
+	t.Log("  Streaming")
+	t.Logf("    Available: %d", c.Streaming.Available)
+}
+
+func TestGetCapabilitiesError(t *testing.T) {
+	b := New(badHostname, username)
+	_, err := b.GetCapabilities()
+	if err == nil {
+		t.Fatal("Expected error not to be nil")
+	}
+}

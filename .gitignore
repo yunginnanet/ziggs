@@ -1,0 +1,4 @@
+assets/
+.idea
+*.unused
+*.toml
