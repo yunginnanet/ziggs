@@ -190,8 +190,8 @@ func processOpts() {
 	// bool options and their exported variables
 	boolOpt := map[string]*bool{
 		"logger.nocolor": &NoColor,
-		"logger.debug":   &debug,
-		"logger.trace":   &trace,
+		"logger.debug":   &Debug,
+		"logger.trace":   &Trace,
 	}
 	// int options and their exported variables
 	intOpt := map[string]*int{
@@ -214,10 +214,10 @@ func processOpts() {
 	}
 
 	switch {
-	case trace:
+	case Trace:
 		zerolog.SetGlobalLevel(zerolog.TraceLevel)
 		logger.Trace().Msg("trace verbosity enabled")
-	case debug:
+	case Debug:
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 		logger.Trace().Msg("debug verbosity enabled")
 	default:

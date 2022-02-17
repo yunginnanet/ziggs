@@ -55,17 +55,9 @@ var (
 	APIKey string
 )
 
-type LogLevel uint8
-
-const (
-	Info LogLevel = iota
-	Debug
-	Trace
-)
-
 var (
-	debug bool
-	trace bool
+	Debug bool
+	Trace bool
 	// Filename identifies the location of our configuration file.
 	Filename           string
 	prefConfigLocation string

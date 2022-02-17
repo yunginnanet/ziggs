@@ -2,3 +2,4 @@ assets/
 .idea
 *.unused
 *.toml
+*.swp
