@@ -53,16 +53,13 @@ func executor(cmd string) {
 
 	switch args[0] {
 
-	case "exit":
-		fallthrough
-
-	case "bridge":
+	case "with":
 		if len(args) <= 2 {
 			return
 		}
 		b, ok := bridges[args[1]]
 		if !ok {
-			log.Error().Msg("unknown bridge")
+			log.Error().Msg("unknown target")
 			return
 		}
 		bcmd, ok := bridgeCMD[args[2]]
@@ -72,7 +69,7 @@ func executor(cmd string) {
 		}
 		bcmd(b)
 
-	case "quit":
+	case "quit", "exit":
 		os.Exit(0)
 
 	case "debug":
@@ -90,7 +87,7 @@ func executor(cmd string) {
 			getHelp("meta")
 			return
 		}
-		getHelp(getArgs(args))
+		getHelp(getArgs(args))x
 	case "clear":
 		print("\033[H\033[2J")
 		// termenv.ClearScreen()
@@ -129,6 +126,7 @@ func getHelp(target string) {
 }
 
 var bridges = make(map[string]*lights.Controller)
+var bulbs = make(map[string]*lights.HueLight)
 
 func cmdScan(br *lights.Controller) error {
 	r, err := br.FindLights()
@@ -141,16 +139,23 @@ func cmdScan(br *lights.Controller) error {
 	var count = 0
 	timer := time.NewTimer(5 * time.Second)
 	var newLights []string
+loop:
 	for {
-		newl, _ := br.GetNewLights()
-		if len(newl.Lights) > count {
+		select {
+		case <-timer.C:
+			break loop
+		default:
+			newl, _ := br.GetNewLights()
+			if len(newl.Lights) <= count {
+				time.Sleep(250 * time.Millisecond)
+				print(".")
+				continue
+			}
 			count = len(newl.Lights)
 			timer.Reset(5 * time.Second)
 			newLights = append(newLights, newl.Lights...)
 		}
-		print(".")
 	}
-	<-timer.C
 	for _, nl := range newLights {
 		log.Info().Str("caller", nl).Msg("discovered light")
 	}
@@ -170,7 +175,7 @@ func processBridges(Known []*lights.Controller) {
 		bridges[c.ID] = c
 		for command, _ := range bridgeCMD {
 			newsug := cli.Suggest{
-				Text:        "bridge " + c.ID + " " + command,
+				Text:        "bridge " + c.Bridge.Host + " " + command,
 				Description: c.Host,
 			}
 			suggestions = append(suggestions, newsug)

@@ -228,6 +228,8 @@ func (c *Controller) getLights() error {
 			controller: c,
 		}
 		c.HueLights = append(c.HueLights, newlight)
+		newlight.SwConfigID
+
 	}
 	return nil
 }
