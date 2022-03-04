@@ -87,7 +87,7 @@ func executor(cmd string) {
 			getHelp("meta")
 			return
 		}
-		getHelp(getArgs(args))x
+		getHelp(getArgs(args))
 	case "clear":
 		print("\033[H\033[2J")
 		// termenv.ClearScreen()
@@ -125,10 +125,10 @@ func getHelp(target string) {
 	*/
 }
 
-var bridges = make(map[string]*lights.Controller)
+var bridges = make(map[string]*lights.Bridge)
 var bulbs = make(map[string]*lights.HueLight)
 
-func cmdScan(br *lights.Controller) error {
+func cmdScan(br *lights.Bridge) error {
 	r, err := br.FindLights()
 	if err != nil {
 		return err
@@ -162,15 +162,15 @@ loop:
 	return nil
 }
 
-func cmdLights(br *lights.Controller) error {
+func cmdLights(br *lights.Bridge) error {
 	return nil
 }
 
-type reactor func(br *lights.Controller) error
+type reactor func(br *lights.Bridge) error
 
 var bridgeCMD = map[string]reactor{"scan": cmdScan, "lights": cmdLights}
 
-func processBridges(Known []*lights.Controller) {
+func processBridges(Known []*lights.Bridge) {
 	for _, c := range Known {
 		bridges[c.ID] = c
 		for command, _ := range bridgeCMD {
@@ -183,7 +183,7 @@ func processBridges(Known []*lights.Controller) {
 	}
 }
 
-func StartCLI(Known []*lights.Controller) {
+func StartCLI(Known []*lights.Bridge) {
 	log = config.GetLogger()
 
 	var hist []string

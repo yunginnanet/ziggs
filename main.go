@@ -20,9 +20,12 @@ func init() {
 	config.Init()
 	log = config.StartLogger()
 	log.Info().Msg("Logger started")
+	if len(os.Args) < 1 {
+		return
+	}
 }
 
-func TurnAll(Known []*lights.Controller, mode lights.ToggleMode) {
+func TurnAll(Known []*lights.Bridge, mode lights.ToggleMode) {
 	for _, bridge := range Known {
 		for _, l := range bridge.HueLights {
 			go func(l *lights.HueLight) {
@@ -38,21 +41,7 @@ func TurnAll(Known []*lights.Controller, mode lights.ToggleMode) {
 	}
 }
 
-func AggressiveStart() (Known []*lights.Controller) {
-	for {
-		Known, err := lights.Setup()
-		if err != nil {
-			log.Warn().Int("count", len(Known)).
-				Msgf("%s", err.Error())
-			continue
-		}
-		if len(Known) > 0 {
-			return Known
-		}
-	}
-}
-
-func FindLights(ctx context.Context, c *lights.Controller) error {
+func FindLights(ctx context.Context, c *lights.Bridge) error {
 	log.Trace().Msg("looking for lights...")
 	resp, err := c.FindLights()
 	if err != nil {
@@ -80,14 +69,18 @@ func FindLights(ctx context.Context, c *lights.Controller) error {
 }
 
 func main() {
-	Known := AggressiveStart()
+	var Known []*lights.Bridge
+	var err error
+	Known, err = lights.Setup()
 
-	if len(Known) == 0 {
-		panic("")
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to get bridges")
 	}
 
 	for _, arg := range os.Args {
 		switch arg {
+		case "discover":
+
 		case "on":
 			log.Debug().Msg("turning all " + arg)
 			TurnAll(Known, lights.ToggleOn)
