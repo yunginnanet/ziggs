@@ -38,10 +38,10 @@ var Lucifer = Meta{
 	RWMutex:  &sync.RWMutex{},
 }
 
-// Bridge is just another word for a bridge, a light controller.
+// Bridge represents a zigbee light controller. Just hue for now.
 type Bridge struct {
 	config    *config.KnownBridge
-	info      *huego.Config
+	Info      *huego.Config
 	HueLights []*HueLight
 	*huego.Bridge
 	*sync.RWMutex
@@ -49,9 +49,9 @@ type Bridge struct {
 
 func (c *Bridge) Log() *zerolog.Logger {
 	l := log.With().
-		Str("caller", c.info.BridgeID).
-		Str("ip", c.info.IPAddress).
-		Uint8("zb", c.info.ZigbeeChannel).Logger()
+		Str("caller", c.Info.BridgeID).
+		Str("ip", c.Info.IPAddress).
+		Uint8("zb", c.Info.ZigbeeChannel).Logger()
 	return &l
 }
 
@@ -82,7 +82,8 @@ func getProxiedBridge(cridge *config.KnownBridge) *huego.Bridge {
 
 func newController(cridge *config.KnownBridge) (*Bridge, error) {
 	c := &Bridge{
-		config: cridge,
+		config:  cridge,
+		RWMutex: &sync.RWMutex{},
 	}
 	if c.config.Proxy == "" {
 		c.Bridge = huego.New(c.config.Hostname, c.config.Username)
@@ -91,7 +92,7 @@ func newController(cridge *config.KnownBridge) (*Bridge, error) {
 	}
 
 	var err error
-	c.info, err = c.GetConfig()
+	c.Info, err = c.GetConfig()
 	if err != nil {
 		return nil, err
 	}
@@ -240,8 +241,6 @@ func (c *Bridge) getLights() error {
 	var err error
 	var l []huego.Light
 
-	defer c.Unlock()
-
 	l, err = c.GetLights()
 	if err != nil {
 		return err
@@ -281,8 +280,9 @@ func promptForUser(cnt *Bridge) bool {
 			return []rune("")
 		},
 	}
-	_, choice, _ := confirmPrompt.Run()
-	if choice != "Yes" {
+	choice, _, _ := confirmPrompt.Run()
+	switch choice {
+	case 0:
 		println("press the link button on your bridge, then press enter")
 		fmt.Scanln()
 		newuser, err := cnt.CreateUser("ziggs" + strconv.Itoa(entropy.RNG(5)))
@@ -293,7 +293,11 @@ func promptForUser(cnt *Bridge) bool {
 		log.Info().Str("caller", cnt.Host).Msg(newuser)
 		log.Trace().Msg("logging in using: " + newuser)
 		cnt.Bridge = cnt.Bridge.Login(newuser)
+		cnt.User = newuser
+	case 1:
+
 	}
+	return true
 }
 
 func promptForDiscovery() error {
@@ -307,8 +311,8 @@ func promptForDiscovery() error {
 			return []rune("")
 		},
 	}
-	_, choice, _ := confirmPrompt.Run()
-	if choice != "Yes" {
+	choice, _, _ := confirmPrompt.Run()
+	if choice != 0 {
 		return errNoBridges
 	}
 	log.Info().Msg("searching for bridges...")
@@ -319,33 +323,38 @@ func promptForDiscovery() error {
 	if len(cs) < 1 {
 		return errNoBridges
 	}
+
+	Lucifer.Lock()
+	defer Lucifer.Unlock()
 	for _, c := range cs {
-		Lucifer.Lock()
 		cnt := &Bridge{
 			Bridge:  &c,
 			RWMutex: &sync.RWMutex{},
 		}
-		Lucifer.Bridges[c.Host] = cnt
-		Lucifer.Unlock()
 		if promptForUser(cnt) {
-			getBridgeInfo(cnt)
+			log.Info().Str("caller", cnt.Host).Msg("login sucessful!")
+			if err = getBridgeInfo(cnt); err != nil {
+				return err
+			}
 		}
+		Lucifer.Lock()
+		Lucifer.Bridges[cnt.Info.BridgeID] = cnt
+		Lucifer.Unlock()
 	}
 	return nil
 }
 
-func getBridgeInfo(c *Bridge) {
+func getBridgeInfo(c *Bridge) error {
+	log.Trace().Msg("getting bridge config...")
 	conf, err := c.GetConfig()
 	if err != nil {
-		log.Warn().Err(err).Msg("failed to get config")
-		return
+		return err
 	}
-	c.info = conf
+	c.Info = conf
 	c.config = &config.KnownBridge{
 		Hostname: conf.IPAddress,
 	}
-	c.Lock()
-	go c.getLights()
+	return c.getLights()
 }
 
 func Setup() (known []*Bridge, err error) {
@@ -359,24 +368,28 @@ func Setup() (known []*Bridge, err error) {
 		}
 		for _, cnt := range Lucifer.Bridges {
 			cnt.RLock()
-			log.Trace().Str("caller", cnt.info.BridgeID).Int("lights", len(cnt.HueLights)).Msg("done")
+			log.Trace().Str("caller", cnt.Info.BridgeID).Int("lights", len(cnt.HueLights)).Msg("done")
 			cnt.RUnlock()
 		}
 	}
 
 	for _, bridge := range known {
-		bridge.Log().Trace().Str("caller", bridge.ID).Str("mac", bridge.info.Mac).Msg("getting lights..")
+		bridge.Log().Trace().Str("caller", bridge.ID).Str("mac", bridge.Info.Mac).Msg("getting lights..")
 		err = bridge.getLights()
 		if err != nil {
-			return
+			bridge.Log().Warn().Err(err).Msg("failed to get lights")
+			continue
 		}
 		var caps *huego.Capabilities
 		caps, err = bridge.GetCapabilities()
 		if err != nil {
-			return
+			bridge.Log().Warn().Err(err).Msg("failed to get caps")
+			continue
 		}
 		bridge.Log().Trace().Interface("supported", caps).Msg("capabilities")
-
+		Lucifer.Lock()
+		Lucifer.Bridges[bridge.Info.BridgeID] = bridge
+		Lucifer.Unlock()
 	}
 	return
 }

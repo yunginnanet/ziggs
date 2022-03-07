@@ -99,7 +99,7 @@ func main() {
 				}
 			}
 		default:
-			interactive.StartCLI(Known)
+			interactive.StartCLI()
 		}
 	}
 
