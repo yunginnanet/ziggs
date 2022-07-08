@@ -4,17 +4,22 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
+	"time"
 
 	"git.tcp.direct/kayos/common/entropy"
+	"git.tcp.direct/kayos/common/network"
 	"github.com/amimof/huego"
 	tui "github.com/manifoldco/promptui"
 	"github.com/rs/zerolog"
 	"golang.org/x/net/proxy"
+	"inet.af/netaddr"
 
 	"git.tcp.direct/kayos/ziggs/config"
 )
@@ -295,9 +300,152 @@ func promptForUser(cnt *Bridge) bool {
 		cnt.Bridge = cnt.Bridge.Login(newuser)
 		cnt.User = newuser
 	case 1:
-
 	}
 	return true
+}
+
+func filterCandidateInterfaces(interfaces []net.Interface) []net.Interface {
+	var err error
+	var candidates []net.Interface
+addrIter:
+	for _, iface := range interfaces {
+		switch {
+		case iface.Flags&net.FlagUp == 0,
+			iface.Flags&net.FlagLoopback != 0,
+			iface.Flags&net.FlagPointToPoint != 0,
+			iface.HardwareAddr == nil:
+			log.Debug().Msgf("skipping %s", iface.Name)
+			continue
+		default:
+			var addrs []net.Addr
+			addrs, err = iface.Addrs()
+			if err != nil {
+				log.Debug().Err(err).Msg("failed to get addresses")
+				continue
+			}
+			for _, a := range addrs {
+				ip := net.ParseIP(a.String())
+				if ip != nil && !ip.IsPrivate() {
+					log.Debug().Msgf("skipping interface %s with public IP: %s", iface.Name, ip)
+					continue addrIter
+				}
+			}
+			candidates = append(candidates, iface)
+		}
+	}
+	return candidates
+}
+
+func enumerateBridge(a net.Addr) net.Addr {
+	var err error
+	if _, err = net.DialTimeout("tcp", a.String()+":80", 2*time.Second); err != nil {
+		log.Debug().Err(err).Msgf("failed to dial %s", a.String())
+		return nil
+	}
+	var resp *http.Response
+	resp, err = http.DefaultClient.Get("http://" + a.String() + "/debug/clip.html")
+	if err != nil {
+		log.Debug().Err(err).Msgf("failed to get %s", a.String())
+		return nil
+	}
+	if resp.StatusCode != 200 {
+		log.Debug().Msgf("%s returned %d", a.String(), resp.StatusCode)
+		return nil
+	}
+	var ret []byte
+	if ret, err = io.ReadAll(resp.Body); err != nil {
+		log.Warn().Err(err).Msg("failed to read response")
+		return nil
+	}
+	if !strings.Contains(string(ret), "CLIP API Debugger") {
+		log.Debug().Msgf("%s does not appear to be a hue bridge", a.String())
+		return nil
+	}
+	return a
+}
+
+func scanChoicePrompt(interfaces []net.Interface) net.Interface {
+	confirmPrompt := tui.Select{
+		Label:     "Choose a network interface to scan for bridges:",
+		Items:     interfaces,
+		CursorPos: 0,
+		IsVimMode: false,
+		Pointer: func(x []rune) []rune {
+			return []rune("")
+		},
+	}
+	choice, _, _ := confirmPrompt.Run()
+	return interfaces[choice]
+}
+
+func checkAddrs(addrs []net.Addr, working *int32, resChan chan net.Addr) {
+	var init = &sync.Once{}
+	log.Trace().Msg("checking addresses")
+	for _, a := range addrs {
+		log.Trace().Msgf("checking %s", a.String())
+		ips := network.IterateNetRange(netaddr.MustParseIPPrefix(a.String()))
+		for ipa := range ips {
+			init.Do(func() { resChan <- nil })
+			for {
+				if atomic.LoadInt32(working) > 30 {
+					time.Sleep(time.Second)
+				}
+				break
+			}
+			log.Trace().Msgf("checking %s", ipa.String())
+			atomic.AddInt32(working, 1)
+			go func(ip netaddr.IP) {
+				resChan <- enumerateBridge(ip.IPAddr())
+				time.Sleep(100 * time.Millisecond)
+				atomic.AddInt32(working, -1)
+			}(ipa)
+		}
+	}
+}
+
+// Determine the LAN network, then look for http servers on all of the local IPs.
+func scanForBridges() ([]net.Addr, error) {
+	var hueIPs []net.Addr
+	interfaces, err := net.Interfaces()
+	if err != nil {
+		return nil, err
+	}
+	interfaces = filterCandidateInterfaces(interfaces)
+	if len(interfaces) == 0 {
+		return nil, errors.New("no viable interfaces found")
+	}
+	chosen := scanChoicePrompt(interfaces)
+	var addrs []net.Addr
+	if addrs, err = chosen.Addrs(); err != nil {
+		log.Debug().Err(err).Msg("failed to get addresses")
+		return nil, err
+	}
+	var working int32
+	resChan := make(chan net.Addr, 55)
+	log.Trace().Interface("addresses", addrs).Msg("checkAddrs()")
+	go checkAddrs(addrs, &working, resChan)
+	<-resChan // wait for sync.Once to throw us a nil
+
+resultLoop:
+	for {
+		select {
+		case res := <-resChan:
+			if res != nil {
+				log.Info().Msgf("found bridge at %s", res.String())
+				hueIPs = append(hueIPs, res)
+			}
+		default:
+			if atomic.LoadInt32(&working) <= 0 {
+				break resultLoop
+			}
+		}
+	}
+
+	if len(hueIPs) == 0 {
+		return nil, errors.New("no bridges found")
+	}
+
+	return hueIPs, nil
 }
 
 func promptForDiscovery() error {
@@ -316,12 +464,16 @@ func promptForDiscovery() error {
 		return errNoBridges
 	}
 	log.Info().Msg("searching for bridges...")
-	cs, err := huego.DiscoverAll()
+	addrs, err := scanForBridges()
 	if err != nil {
 		return err
 	}
-	if len(cs) < 1 {
+	if len(addrs) < 1 {
 		return errNoBridges
+	}
+	var cs []huego.Bridge
+	for _, a := range addrs {
+		cs = append(cs, huego.Bridge{Host: a.String()})
 	}
 
 	Lucifer.Lock()

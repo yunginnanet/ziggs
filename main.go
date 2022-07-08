@@ -2,9 +2,12 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"time"
 
+	"github.com/amimof/huego"
+	"github.com/manifoldco/promptui"
 	"github.com/rs/zerolog"
 
 	"git.tcp.direct/kayos/ziggs/config"
@@ -68,6 +71,41 @@ func FindLights(ctx context.Context, c *lights.Bridge) error {
 	}
 }
 
+func getNewSensors(Known *lights.Bridge) {
+	go Known.FindSensors()
+
+	Sensors, err := Known.GetNewSensors()
+	if Sensors == nil {
+		log.Fatal().Caller(1).Msg("nil")
+	}
+	for len(Sensors.Sensors) < 1 {
+		Sensors, err = Known.GetNewSensors()
+		if err != nil {
+			log.Error().Err(err).Msg("")
+		}
+		time.Sleep(2 * time.Second)
+	}
+	go log.Debug().Interface("sensors", Sensors).Msg("")
+	selSensor(Sensors.Sensors)
+}
+
+func selSensor(Sensors []*huego.Sensor) huego.Sensor {
+	p := promptui.Select{
+		Label:        "Sensors",
+		Items:        Sensors,
+		CursorPos:    0,
+		HideHelp:     false,
+		HideSelected: false,
+		Pointer:      func(to []rune) []rune { return []rune(``) },
+	}
+	i, s, e := p.Run()
+	if e != nil {
+		log.Error().Err(e).Msg("")
+	}
+	fmt.Printf("\nselected [%d] %s\n", i, s)
+	return *Sensors[i]
+}
+
 func main() {
 	var Known []*lights.Bridge
 	var err error
@@ -98,8 +136,20 @@ func main() {
 					FindLights(ctx, k)
 				}
 			}
-		default:
+		case "shell":
 			interactive.StartCLI()
+		case "newsensor":
+			getNewSensors(Known[0])
+		case "sensors":
+			sens, err := Known[0].GetSensors()
+			if err != nil {
+				log.Fatal().Err(err).Msg("")
+			}
+			var sensptr []*huego.Sensor
+			for _, s := range sens {
+				sensptr = append(sensptr, &s)
+			}
+			selSensor(sensptr)
 		}
 	}
 
