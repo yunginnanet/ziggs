@@ -53,8 +53,9 @@ func executor(cmd string) {
 	case "quit", "exit":
 		os.Exit(0)
 	case "use":
-		if len(args) <= 1 {
-			println()
+		if len(args) < 2 {
+			println("use: use <bridge>")
+			return
 		}
 		if br, ok := lights.Lucifer.Bridges[args[1]]; !ok {
 			println("invalid bridge: " + args[1])
@@ -85,14 +86,16 @@ func executor(cmd string) {
 			println()
 			return
 		}
-		log.Trace().Msg("executor found for " + args[0])
 		br, ok := lights.Lucifer.Bridges[selectedBridge]
 		if selectedBridge == "" || !ok {
 			for _, br := range lights.Lucifer.Bridges {
 				go bcmd(br, args[1:])
 			}
 		} else {
-			bcmd(br, args[1:])
+			err := bcmd(br, args[1:])
+			if err != nil {
+				log.Error().Err(err).Msg("error executing command")
+			}
 		}
 	}
 
