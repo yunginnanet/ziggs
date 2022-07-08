@@ -71,15 +71,17 @@ func FindLights(ctx context.Context, c *lights.Bridge) error {
 	}
 }
 
-func getNewSensors(Known *lights.Bridge) {
-	go Known.FindSensors()
-
-	Sensors, err := Known.GetNewSensors()
+func getNewSensors(known *lights.Bridge) {
+	go known.FindSensors()
+	Sensors, err := known.GetNewSensors()
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to get sensors")
+	}
 	if Sensors == nil {
 		log.Fatal().Caller(1).Msg("nil")
 	}
 	for len(Sensors.Sensors) < 1 {
-		Sensors, err = Known.GetNewSensors()
+		Sensors, err = known.GetNewSensors()
 		if err != nil {
 			log.Error().Err(err).Msg("")
 		}

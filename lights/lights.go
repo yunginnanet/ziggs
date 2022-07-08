@@ -277,8 +277,8 @@ func (c *Bridge) Lights() []*HueLight {
 func promptForUser(cnt *Bridge) bool {
 	log.Info().Msg("found new bridge")
 	confirmPrompt := tui.Select{
-		Label:     "Create new user?",
-		Items:     []string{"Yes", "No"},
+		Label:     "How should we authenticate?",
+		Items:     []string{"Create new user", "Provide existing username"},
 		CursorPos: 0,
 		IsVimMode: false,
 		Pointer: func(x []rune) []rune {
@@ -295,11 +295,46 @@ func promptForUser(cnt *Bridge) bool {
 			log.Error().Err(err).Msg("failed")
 			return false
 		}
-		log.Info().Str("caller", cnt.Host).Msg(newuser)
-		log.Trace().Msg("logging in using: " + newuser)
-		cnt.Bridge = cnt.Bridge.Login(newuser)
 		cnt.User = newuser
 	case 1:
+		userEntry := tui.Prompt{
+			Label: "Username:",
+			Validate: func(s string) error {
+				if len(s) < 40 {
+					return errors.New("username must be at least 40 characters")
+				}
+				return nil
+			},
+			Mask:        'x',
+			HideEntered: false,
+			Pointer: func(x []rune) []rune {
+				return []rune("")
+			},
+		}
+		var err error
+		var input string
+		input, err = userEntry.Run()
+		if err != nil {
+			log.Error().Err(err).Msg("failed")
+		}
+		cnt.User = strings.TrimSpace(input)
+	}
+	log.Info().Str("caller", cnt.Host).Msg("logging in...")
+	log.Trace().Msg("logging in using: " + cnt.User)
+	cnt.Bridge = cnt.Bridge.Login(cnt.User)
+	_, err := cnt.Bridge.GetCapabilities()
+	if err != nil {
+		log.Error().Err(err).Msg("failed to verify that we are logged in")
+		return false
+	}
+	config.Snek.Set("bridges", map[string]interface{}{
+		"hostname": cnt.Host,
+		"username": cnt.User,
+	})
+	if err = config.Snek.WriteConfig(); err != nil {
+		log.Warn().Msg("failed to write config")
+	} else {
+		log.Info().Msg("configuration saved!")
 	}
 	return true
 }
@@ -336,14 +371,16 @@ addrIter:
 	return candidates
 }
 
-func enumerateBridge(a net.Addr) net.Addr {
+func enumerateBridge(a net.Addr) interface{} {
 	var err error
 	if _, err = net.DialTimeout("tcp", a.String()+":80", 2*time.Second); err != nil {
 		log.Debug().Err(err).Msgf("failed to dial %s", a.String())
 		return nil
 	}
 	var resp *http.Response
-	resp, err = http.DefaultClient.Get("http://" + a.String() + "/debug/clip.html")
+	c := http.DefaultClient
+	c.Timeout = 2 * time.Second
+	resp, err = c.Get("http://" + a.String() + "/api/config")
 	if err != nil {
 		log.Debug().Err(err).Msgf("failed to get %s", a.String())
 		return nil
@@ -357,11 +394,13 @@ func enumerateBridge(a net.Addr) net.Addr {
 		log.Warn().Err(err).Msg("failed to read response")
 		return nil
 	}
-	if !strings.Contains(string(ret), "CLIP API Debugger") {
+	if !strings.Contains(string(ret), "Philips hue") || !strings.Contains(string(ret), "bridgeid") {
 		log.Debug().Msgf("%s does not appear to be a hue bridge", a.String())
 		return nil
 	}
-	return a
+
+	br, _ := huego.NewCustom(ret, a.String(), http.DefaultClient)
+	return br
 }
 
 func scanChoicePrompt(interfaces []net.Interface) net.Interface {
@@ -378,16 +417,16 @@ func scanChoicePrompt(interfaces []net.Interface) net.Interface {
 	return interfaces[choice]
 }
 
-func checkAddrs(addrs []net.Addr, working *int32, resChan chan net.Addr) {
+func checkAddrs(addrs []net.Addr, working *int32, resChan chan interface{}) {
 	var init = &sync.Once{}
 	log.Trace().Msg("checking addresses")
 	for _, a := range addrs {
 		log.Trace().Msgf("checking %s", a.String())
 		ips := network.IterateNetRange(netaddr.MustParseIPPrefix(a.String()))
 		for ipa := range ips {
-			init.Do(func() { resChan <- nil })
+			init.Do(func() { resChan <- &huego.Bridge{} })
 			for {
-				if atomic.LoadInt32(working) > 30 {
+				if atomic.LoadInt32(working) > 50 {
 					time.Sleep(time.Second)
 				}
 				break
@@ -404,8 +443,8 @@ func checkAddrs(addrs []net.Addr, working *int32, resChan chan net.Addr) {
 }
 
 // Determine the LAN network, then look for http servers on all of the local IPs.
-func scanForBridges() ([]net.Addr, error) {
-	var hueIPs []net.Addr
+func scanForBridges() ([]*huego.Bridge, error) {
+	var hueIPs []*huego.Bridge
 	interfaces, err := net.Interfaces()
 	if err != nil {
 		return nil, err
@@ -421,7 +460,7 @@ func scanForBridges() ([]net.Addr, error) {
 		return nil, err
 	}
 	var working int32
-	resChan := make(chan net.Addr, 55)
+	resChan := make(chan interface{}, 55)
 	log.Trace().Interface("addresses", addrs).Msg("checkAddrs()")
 	go checkAddrs(addrs, &working, resChan)
 	<-resChan // wait for sync.Once to throw us a nil
@@ -430,9 +469,10 @@ resultLoop:
 	for {
 		select {
 		case res := <-resChan:
-			if res != nil {
-				log.Info().Msgf("found bridge at %s", res.String())
-				hueIPs = append(hueIPs, res)
+			bridge, ok := res.(*huego.Bridge)
+			if ok && bridge != nil {
+				log.Info().Msgf("found %T: %v", bridge, bridge)
+				hueIPs = append(hueIPs, bridge)
 			}
 		default:
 			if atomic.LoadInt32(&working) <= 0 {
@@ -464,23 +504,23 @@ func promptForDiscovery() error {
 		return errNoBridges
 	}
 	log.Info().Msg("searching for bridges...")
-	addrs, err := scanForBridges()
+	bridges, err := scanForBridges()
 	if err != nil {
 		return err
 	}
-	if len(addrs) < 1 {
+	if len(bridges) < 1 {
 		return errNoBridges
 	}
-	var cs []huego.Bridge
-	for _, a := range addrs {
-		cs = append(cs, huego.Bridge{Host: a.String()})
+	var cs []*huego.Bridge
+	for _, brd := range bridges {
+		cs = append(cs, brd)
 	}
 
 	Lucifer.Lock()
 	defer Lucifer.Unlock()
 	for _, c := range cs {
 		cnt := &Bridge{
-			Bridge:  &c,
+			Bridge:  c,
 			RWMutex: &sync.RWMutex{},
 		}
 		if promptForUser(cnt) {
