@@ -13,16 +13,16 @@ import (
 var (
 	saveTermios     unix.Termios
 	saveTermiosFD   int
-	saveTermiosOnce sync.Once
+	saveTermiosOnce = &sync.Once{}
 )
 
 func getOriginalTermios(fd int) (unix.Termios, error) {
 	var err error
 	saveTermiosOnce.Do(func() {
 		saveTermiosFD = fd
-		var saveTermiosPtr *unix.Termios
-		termios.Tcgetattr(uintptr(fd), saveTermiosPtr)
-		saveTermios = *saveTermiosPtr
+		var saveTermiosPtr unix.Termios
+		err = termios.Tcgetattr(uintptr(fd), &saveTermiosPtr)
+		saveTermios = saveTermiosPtr
 	})
 	return saveTermios, err
 }

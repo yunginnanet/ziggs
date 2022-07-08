@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"sync"
 	"time"
 
 	cli "git.tcp.direct/Mirrors/go-prompt"
@@ -132,7 +131,7 @@ func cmdScan(br *lights.Bridge, args []string) error {
 	if err != nil {
 		return err
 	}
-	for resp, _ := range r.Success {
+	for resp := range r.Success {
 		log.Info().Msg(resp)
 	}
 	var count = 0
@@ -171,20 +170,20 @@ func StartCLI() {
 	var hist []string
 	processBridges(lights.Lucifer.Bridges)
 
-	comphead := 0
-	compmu := &sync.Mutex{}
-	cleanSlate := func(b *cli.Buffer) {
-		compmu.Lock()
-		defer compmu.Lock()
-		sugs := completer(*b.Document())
-		if comphead > len(sugs)-2 {
-			comphead = 0
-			return
-		}
-		comphead++
-		b.CursorLeft(len(b.Document().TextBeforeCursor()))
-		b.InsertText(sugs[comphead].Text, true, true)
-	}
+	/*	comphead := 0
+		compmu := &sync.Mutex{}
+		cleanSlate := func(b *cli.Buffer) {
+			compmu.Lock()
+			defer compmu.Lock()
+			sugs := completer(*b.Document())
+			if comphead > len(sugs)-2 {
+				comphead = 0
+				return
+			}
+			comphead++
+			b.CursorLeft(len(b.Document().TextBeforeCursor()))
+			b.InsertText(sugs[comphead].Text, true, true)
+		}*/
 
 	p := cli.New(
 		executor,
@@ -205,16 +204,16 @@ func StartCLI() {
 				return fmt.Sprintf("ziggs[%s] %s ", sel, bulb), true
 			}),
 		cli.OptionTitle("ziggs"),
-		cli.OptionAddKeyBind(cli.KeyBind{
-			Key: cli.Tab,
-			Fn:  cleanSlate,
-		}),
-		cli.OptionCompletionOnDown(),
-		cli.OptionAddKeyBind(cli.KeyBind{
-			Key: cli.Down,
-			Fn:  cleanSlate,
-		}),
-	)
+		/*		cli.OptionAddKeyBind(cli.KeyBind{
+					Key: cli.Tab,
+					Fn:  cleanSlate,
+				}),
+		*/cli.OptionCompletionOnDown(),
+		/*		cli.OptionAddKeyBind(cli.KeyBind{
+					Key: cli.Down,
+					Fn:  cleanSlate,
+				}),
+		*/)
 
 	p.Run()
 }
