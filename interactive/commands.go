@@ -115,30 +115,41 @@ func cmdSet(bridge *lights.Bridge, args []string) error {
 				if currentState == nil {
 					return fmt.Errorf("no state found")
 				}
-				return fmt.Errorf("couldn't lower brightness: %w", target.Bri(currentState.Bri-5))
+				err := target.Bri(currentState.Bri - 5)
+				if err != nil {
+					err = fmt.Errorf("couldn't lower brightness: %w", err)
+				}
+				return err
 			}
 		case "brightness++", "brighten":
 			action = func() error {
 				if currentState == nil {
 					return fmt.Errorf("no state found")
 				}
-				return fmt.Errorf("couldn't raise brightness: %w", target.Bri(currentState.Bri+5))
+				err := target.Bri(currentState.Bri + 5)
+				if err != nil {
+					err = fmt.Errorf("couldn't raise brightness: %w", err)
+				}
+				return err
 			}
 		case "brightness":
-			if len(args) <= argHead-1 {
+			if len(args) == argHead-1 {
 				return errors.New("no brightness specified")
 			}
 			argHead++
 			newBrightness, numErr := strconv.Atoi(args[argHead])
 			if numErr != nil {
-				return numErr
+				return fmt.Errorf("given brightness is not a number: %w", numErr)
 			}
 			action = func() error {
-				return fmt.Errorf("failed to set brightness: %w",
-					target.Bri(uint8(newBrightness)))
+				err := target.Bri(uint8(newBrightness))
+				if err != nil {
+					err = fmt.Errorf("failed to set brightness: %w", err)
+				}
+				return err
 			}
 		case "color":
-			if len(args) <= argHead-1 {
+			if len(args) == argHead-1 {
 				return errors.New("not enough arguments")
 			}
 			argHead++
@@ -146,9 +157,21 @@ func cmdSet(bridge *lights.Bridge, args []string) error {
 			if err != nil {
 				return err
 			}
-			action = func() error { return fmt.Errorf("failed to set color: %w", target.Col(newcolor)) }
+			action = func() error {
+				colErr := target.Col(newcolor)
+				if colErr != nil {
+					colErr = fmt.Errorf("failed to set color: %w", colErr)
+				}
+				return colErr
+			}
 		case "alert":
-			action = func() error { return fmt.Errorf("failed to set alert: %w", target.Alert("select")) }
+			action = func() error {
+				alErr := target.Alert("select")
+				if alErr != nil {
+					alErr = fmt.Errorf("failed to turn on alert: %w", alErr)
+				}
+				return alErr
+			}
 		default:
 			return fmt.Errorf("unknown argument: " + args[argHead])
 		}
