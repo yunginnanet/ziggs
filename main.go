@@ -10,9 +10,10 @@ import (
 	"github.com/manifoldco/promptui"
 	"github.com/rs/zerolog"
 
+	"git.tcp.direct/kayos/ziggs/common"
 	"git.tcp.direct/kayos/ziggs/config"
 	"git.tcp.direct/kayos/ziggs/interactive"
-	"git.tcp.direct/kayos/ziggs/lights"
+	"git.tcp.direct/kayos/ziggs/ziggy"
 )
 
 var (
@@ -28,23 +29,23 @@ func init() {
 	}
 }
 
-func TurnAll(Known []*lights.Bridge, mode lights.ToggleMode) {
+func TurnAll(Known []*ziggy.Bridge, mode ziggy.ToggleMode) {
 	for _, bridge := range Known {
 		for _, l := range bridge.HueLights {
-			go func(l *lights.HueLight) {
+			go func(l *ziggy.HueLight) {
 				l.Log().Debug().
 					Str("caller", bridge.Host).
 					Str("type", l.ProductName).
 					Bool("on", l.IsOn()).Msg(l.ModelID)
 				ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(5*time.Second))
-				lights.Assert(ctx, l, mode)
+				ziggy.Assert(ctx, l, mode)
 				defer cancel()
 			}(l)
 		}
 	}
 }
 
-func FindLights(ctx context.Context, c *lights.Bridge) error {
+func FindLights(ctx context.Context, c *ziggy.Bridge) error {
 	log.Trace().Msg("looking for lights...")
 	resp, err := c.FindLights()
 	if err != nil {
@@ -71,7 +72,7 @@ func FindLights(ctx context.Context, c *lights.Bridge) error {
 	}
 }
 
-func getNewSensors(known *lights.Bridge) {
+func getNewSensors(known *ziggy.Bridge) {
 	go known.FindSensors()
 	Sensors, err := known.GetNewSensors()
 	if err != nil {
@@ -98,7 +99,7 @@ func selSensor(Sensors []*huego.Sensor) huego.Sensor {
 		CursorPos:    0,
 		HideHelp:     false,
 		HideSelected: false,
-		Pointer:      func(to []rune) []rune { return []rune(``) },
+		Pointer:      common.ZiggsPointer,
 	}
 	i, s, e := p.Run()
 	if e != nil {
@@ -109,9 +110,9 @@ func selSensor(Sensors []*huego.Sensor) huego.Sensor {
 }
 
 func main() {
-	var Known []*lights.Bridge
+	var Known []*ziggy.Bridge
 	var err error
-	Known, err = lights.Setup()
+	Known, err = ziggy.Setup()
 
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to get bridges")
@@ -123,13 +124,13 @@ func main() {
 
 		case "on":
 			log.Debug().Msg("turning all " + arg)
-			TurnAll(Known, lights.ToggleOn)
+			TurnAll(Known, ziggy.ToggleOn)
 		case "off":
 			log.Debug().Msg("turning all " + arg)
-			TurnAll(Known, lights.ToggleOff)
+			TurnAll(Known, ziggy.ToggleOff)
 		case "rainbow":
 			log.Debug().Msg("turning all " + arg)
-			TurnAll(Known, lights.ToggleRainbow)
+			TurnAll(Known, ziggy.ToggleRainbow)
 		case "scan":
 			log.Debug().Msg("executing " + arg)
 			if len(os.Args) < 2 {

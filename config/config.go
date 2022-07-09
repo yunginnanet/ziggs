@@ -97,9 +97,9 @@ func setDefaults() {
 		"use_date_filename": true,
 	}
 	Opt["bridges"] = map[string]interface{}{
-		"hostname": "192.168.6.100",
+		"hostname": "192.168.69.100",
 		"username": "",
-		"proxy":    "socks5://127.0.0.1:8060",
+		"proxy":    "",
 	}
 
 	Opt["http"] = map[string]interface{}{

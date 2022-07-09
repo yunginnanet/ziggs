@@ -11,8 +11,9 @@ import (
 	tui "github.com/manifoldco/promptui"
 	"github.com/rs/zerolog"
 
+	"git.tcp.direct/kayos/ziggs/common"
 	"git.tcp.direct/kayos/ziggs/config"
-	"git.tcp.direct/kayos/ziggs/lights"
+	"git.tcp.direct/kayos/ziggs/ziggy"
 )
 
 var log *zerolog.Logger
@@ -45,10 +46,8 @@ func InteractiveAuth() string {
 // Interpret is where we will actuall define our commands
 func executor(cmd string) {
 	cmd = strings.TrimSpace(cmd)
-
 	var args []string
 	args = strings.Split(cmd, " ")
-
 	switch args[0] {
 	case "quit", "exit":
 		os.Exit(0)
@@ -57,7 +56,7 @@ func executor(cmd string) {
 			println("use: use <bridge>")
 			return
 		}
-		if br, ok := lights.Lucifer.Bridges[args[1]]; !ok {
+		if br, ok := ziggy.Lucifer.Bridges[args[1]]; !ok {
 			println("invalid bridge: " + args[1])
 		} else {
 			selectedBridge = args[1]
@@ -83,12 +82,20 @@ func executor(cmd string) {
 	default:
 		bcmd, ok := bridgeCMD[args[0]]
 		if !ok {
-			println()
 			return
 		}
-		br, ok := lights.Lucifer.Bridges[selectedBridge]
+		br, ok := ziggy.Lucifer.Bridges[selectedBridge]
 		if selectedBridge == "" || !ok {
-			for _, br := range lights.Lucifer.Bridges {
+			prompt := tui.Select{
+				Label:   "Send to all known bridges?",
+				Items:   []string{"yes", "no"},
+				Pointer: common.ZiggsPointer,
+			}
+			_, ch, _ := prompt.Run()
+			if ch != "yes" {
+				return
+			}
+			for _, br := range ziggy.Lucifer.Bridges {
 				go bcmd(br, args[1:])
 			}
 		} else {
@@ -98,7 +105,6 @@ func executor(cmd string) {
 			}
 		}
 	}
-
 }
 
 func getHelp(target string) {
@@ -129,7 +135,7 @@ func getHelp(target string) {
 	*/
 }
 
-func cmdScan(br *lights.Bridge, args []string) error {
+func cmdScan(br *ziggy.Bridge, args []string) error {
 	r, err := br.FindLights()
 	if err != nil {
 		return err
@@ -171,7 +177,7 @@ func StartCLI() {
 	log = config.GetLogger()
 
 	var hist []string
-	processBridges(lights.Lucifer.Bridges)
+	processBridges(ziggy.Lucifer.Bridges)
 
 	/*	comphead := 0
 		compmu := &sync.Mutex{}

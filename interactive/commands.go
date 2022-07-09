@@ -9,7 +9,7 @@ import (
 	cli "git.tcp.direct/Mirrors/go-prompt"
 	"github.com/amimof/huego"
 
-	"git.tcp.direct/kayos/ziggs/lights"
+	"git.tcp.direct/kayos/ziggs/ziggy"
 )
 
 var errInvalidFormat = errors.New("invalid format")
@@ -49,7 +49,7 @@ func ParseHexColorFast(s string) (c color.RGBA, err error) {
 	return
 }
 
-func cmdLights(br *lights.Bridge, args []string) error {
+func cmdLights(br *ziggy.Bridge, args []string) error {
 	if len(br.HueLights) == 0 {
 		return errors.New("no lights found")
 	}
@@ -61,7 +61,7 @@ func cmdLights(br *lights.Bridge, args []string) error {
 	return nil
 }
 
-func cmdSet(bridge *lights.Bridge, args []string) error {
+func cmdSet(bridge *ziggy.Bridge, args []string) error {
 	if len(args) < 3 {
 		return errors.New("not enough arguments")
 	}
@@ -80,7 +80,8 @@ func cmdSet(bridge *lights.Bridge, args []string) error {
 
 	var groupmap map[string]huego.Group
 
-	var action func() error
+	type action func() error
+	var actions []action
 	var currentState *huego.State
 
 	var argHead = -1
@@ -107,11 +108,11 @@ func cmdSet(bridge *lights.Bridge, args []string) error {
 			}
 			target = &g
 		case "on":
-			action = target.On
+			actions = append(actions, target.On)
 		case "off":
-			action = target.Off
+			actions = append(actions, target.Off)
 		case "brightness--", "dim":
-			action = func() error {
+			actions = append(actions, func() error {
 				if currentState == nil {
 					return fmt.Errorf("no state found")
 				}
@@ -120,9 +121,9 @@ func cmdSet(bridge *lights.Bridge, args []string) error {
 					err = fmt.Errorf("couldn't lower brightness: %w", err)
 				}
 				return err
-			}
+			})
 		case "brightness++", "brighten":
-			action = func() error {
+			actions = append(actions, func() error {
 				if currentState == nil {
 					return fmt.Errorf("no state found")
 				}
@@ -131,7 +132,7 @@ func cmdSet(bridge *lights.Bridge, args []string) error {
 					err = fmt.Errorf("couldn't raise brightness: %w", err)
 				}
 				return err
-			}
+			})
 		case "brightness":
 			if len(args) == argHead-1 {
 				return errors.New("no brightness specified")
@@ -141,13 +142,13 @@ func cmdSet(bridge *lights.Bridge, args []string) error {
 			if numErr != nil {
 				return fmt.Errorf("given brightness is not a number: %w", numErr)
 			}
-			action = func() error {
+			actions = append(actions, func() error {
 				err := target.Bri(uint8(newBrightness))
 				if err != nil {
 					err = fmt.Errorf("failed to set brightness: %w", err)
 				}
 				return err
-			}
+			})
 		case "color":
 			if len(args) == argHead-1 {
 				return errors.New("not enough arguments")
@@ -157,26 +158,26 @@ func cmdSet(bridge *lights.Bridge, args []string) error {
 			if err != nil {
 				return err
 			}
-			action = func() error {
+			actions = append(actions, func() error {
 				colErr := target.Col(newcolor)
 				if colErr != nil {
 					colErr = fmt.Errorf("failed to set color: %w", colErr)
 				}
 				return colErr
-			}
+			})
 		case "alert":
-			action = func() error {
+			actions = append(actions, func() error {
 				alErr := target.Alert("select")
 				if alErr != nil {
 					alErr = fmt.Errorf("failed to turn on alert: %w", alErr)
 				}
 				return alErr
-			}
+			})
 		default:
 			return fmt.Errorf("unknown argument: " + args[argHead])
 		}
 	}
-	if action == nil {
+	if actions == nil {
 		return errors.New("no action specified")
 	}
 	if target == nil {
@@ -191,21 +192,24 @@ func cmdSet(bridge *lights.Bridge, args []string) error {
 		currentState = tl.State
 	}
 	log.Trace().Msgf("current state: %v", currentState)
-	err := action()
-	if err != nil {
-		return err
+	for d, act := range actions {
+		log.Trace().Msgf("running action %d", d)
+		err := act()
+		if err != nil {
+			return err
+		}
+		switch {
+		case tgok:
+			currentState = tg.State
+		case tlok:
+			currentState = tl.State
+		}
+		log.Trace().Msgf("new state: %v", currentState)
 	}
-	switch {
-	case tgok:
-		currentState = tg.State
-	case tlok:
-		currentState = tl.State
-	}
-	log.Trace().Msgf("new state: %v", currentState)
 	return nil
 }
 
-func getGroupMap(br *lights.Bridge) (map[string]huego.Group, error) {
+func getGroupMap(br *ziggy.Bridge) (map[string]huego.Group, error) {
 	var groupmap = make(map[string]huego.Group)
 	gs, err := br.Bridge.GetGroups()
 	if err != nil {
@@ -217,7 +221,7 @@ func getGroupMap(br *lights.Bridge) (map[string]huego.Group, error) {
 	return groupmap, nil
 }
 
-func cmdGroups(br *lights.Bridge, args []string) error {
+func cmdGroups(br *ziggy.Bridge, args []string) error {
 	groupmap, err := getGroupMap(br)
 	if err != nil {
 		return err
@@ -232,7 +236,7 @@ func cmdGroups(br *lights.Bridge, args []string) error {
 	return nil
 }
 
-type reactor func(bridge *lights.Bridge, args []string) error
+type reactor func(bridge *ziggy.Bridge, args []string) error
 
 var bridgeCMD = map[string]reactor{
 	"scan":   cmdScan,
@@ -247,7 +251,7 @@ type completeMapper map[cli.Suggest][]cli.Suggest
 
 var suggestions completeMapper = make(map[cli.Suggest][]cli.Suggest)
 
-func processBridges(brs map[string]*lights.Bridge) {
+func processBridges(brs map[string]*ziggy.Bridge) {
 	for brd, c := range brs {
 		suggestions[cli.Suggest{Text: "use"}] = append(
 			suggestions[cli.Suggest{Text: "use"}],

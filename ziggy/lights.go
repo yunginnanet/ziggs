@@ -1,4 +1,4 @@
-package lights
+package ziggy
 
 import (
 	"context"
@@ -21,6 +21,7 @@ import (
 	"golang.org/x/net/proxy"
 	"inet.af/netaddr"
 
+	"git.tcp.direct/kayos/ziggs/common"
 	"git.tcp.direct/kayos/ziggs/config"
 )
 
@@ -281,9 +282,7 @@ func promptForUser(cnt *Bridge) bool {
 		Items:     []string{"Create new user", "Provide existing username"},
 		CursorPos: 0,
 		IsVimMode: false,
-		Pointer: func(x []rune) []rune {
-			return []rune("")
-		},
+		Pointer:   common.ZiggsPointer,
 	}
 	choice, _, _ := confirmPrompt.Run()
 	switch choice {
@@ -307,9 +306,7 @@ func promptForUser(cnt *Bridge) bool {
 			},
 			Mask:        'x',
 			HideEntered: false,
-			Pointer: func(x []rune) []rune {
-				return []rune("")
-			},
+			Pointer:     common.ZiggsPointer,
 		}
 		var err error
 		var input string
@@ -409,15 +406,13 @@ func scanChoicePrompt(interfaces []net.Interface) net.Interface {
 		Items:     interfaces,
 		CursorPos: 0,
 		IsVimMode: false,
-		Pointer: func(x []rune) []rune {
-			return []rune("")
-		},
+		Pointer:   common.ZiggsPointer,
 	}
 	choice, _, _ := confirmPrompt.Run()
 	return interfaces[choice]
 }
 
-func checkAddrs(addrs []net.Addr, working *int32, resChan chan interface{}) {
+func checkAddrs(ctx context.Context, addrs []net.Addr, working *int32, resChan chan interface{}) {
 	var init = &sync.Once{}
 	log.Trace().Msg("checking addresses")
 	for _, a := range addrs {
@@ -425,11 +420,18 @@ func checkAddrs(addrs []net.Addr, working *int32, resChan chan interface{}) {
 		ips := network.IterateNetRange(netaddr.MustParseIPPrefix(a.String()))
 		for ipa := range ips {
 			init.Do(func() { resChan <- &huego.Bridge{} })
+		ctxLoop:
 			for {
-				if atomic.LoadInt32(working) > 50 {
-					time.Sleep(time.Second)
+				select {
+				case <-ctx.Done():
+					return
+				default:
+					if atomic.LoadInt32(working) > 25 {
+						time.Sleep(100 * time.Millisecond)
+						continue
+					}
+					break ctxLoop
 				}
-				break
 			}
 			log.Trace().Msgf("checking %s", ipa.String())
 			atomic.AddInt32(working, 1)
@@ -461,8 +463,9 @@ func scanForBridges() ([]*huego.Bridge, error) {
 	}
 	var working int32
 	resChan := make(chan interface{}, 55)
+	ctx, cancel := context.WithCancel(context.Background())
 	log.Trace().Interface("addresses", addrs).Msg("checkAddrs()")
-	go checkAddrs(addrs, &working, resChan)
+	go checkAddrs(ctx, addrs, &working, resChan)
 	<-resChan // wait for sync.Once to throw us a nil
 
 resultLoop:
@@ -473,9 +476,12 @@ resultLoop:
 			if ok && bridge != nil {
 				log.Info().Msgf("found %T: %v", bridge, bridge)
 				hueIPs = append(hueIPs, bridge)
+				cancel()
+				atomic.StoreInt32(&working, 0)
 			}
 		default:
 			if atomic.LoadInt32(&working) <= 0 {
+				cancel()
 				break resultLoop
 			}
 		}
@@ -495,9 +501,7 @@ func promptForDiscovery() error {
 		Items:     []string{"Yes", "No"},
 		CursorPos: 0,
 		IsVimMode: false,
-		Pointer: func(x []rune) []rune {
-			return []rune("")
-		},
+		Pointer:   common.ZiggsPointer,
 	}
 	choice, _, _ := confirmPrompt.Run()
 	if choice != 0 {
