@@ -5,7 +5,7 @@ git.tcp.direct/Mirrors/go-prompt/internal/bisect
 git.tcp.direct/Mirrors/go-prompt/internal/debug
 git.tcp.direct/Mirrors/go-prompt/internal/strings
 git.tcp.direct/Mirrors/go-prompt/internal/term
-# git.tcp.direct/kayos/common v0.5.5
+# git.tcp.direct/kayos/common v0.6.1
 ## explicit; go 1.18
 git.tcp.direct/kayos/common/entropy
 git.tcp.direct/kayos/common/network

@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	git.tcp.direct/Mirrors/go-prompt v0.2.7
-	git.tcp.direct/kayos/common v0.5.5
+	git.tcp.direct/kayos/common v0.6.1
 	github.com/amimof/huego v1.2.2-0.20220227085811-5668ae651bd8
 	github.com/manifoldco/promptui v0.9.0
 	github.com/rs/zerolog v1.27.0

@@ -9,7 +9,7 @@ import (
 	cli "git.tcp.direct/Mirrors/go-prompt"
 	"github.com/amimof/huego"
 
-	"git.tcp.direct/kayos/ziggs/ziggy"
+	"git.tcp.direct/kayos/ziggs/internal/ziggy"
 )
 
 var errInvalidFormat = errors.New("invalid format")

@@ -11,9 +11,9 @@ import (
 	tui "github.com/manifoldco/promptui"
 	"github.com/rs/zerolog"
 
-	"git.tcp.direct/kayos/ziggs/common"
-	"git.tcp.direct/kayos/ziggs/config"
-	"git.tcp.direct/kayos/ziggs/ziggy"
+	"git.tcp.direct/kayos/ziggs/internal/common"
+	"git.tcp.direct/kayos/ziggs/internal/config"
+	"git.tcp.direct/kayos/ziggs/internal/ziggy"
 )
 
 var log *zerolog.Logger
@@ -179,21 +179,6 @@ func StartCLI() {
 	var hist []string
 	processBridges(ziggy.Lucifer.Bridges)
 
-	/*	comphead := 0
-		compmu := &sync.Mutex{}
-		cleanSlate := func(b *cli.Buffer) {
-			compmu.Lock()
-			defer compmu.Lock()
-			sugs := completer(*b.Document())
-			if comphead > len(sugs)-2 {
-				comphead = 0
-				return
-			}
-			comphead++
-			b.CursorLeft(len(b.Document().TextBeforeCursor()))
-			b.InsertText(sugs[comphead].Text, true, true)
-		}*/
-
 	p := cli.New(
 		executor,
 		completer,
@@ -213,16 +198,8 @@ func StartCLI() {
 				return fmt.Sprintf("ziggs[%s] %s ", sel, bulb), true
 			}),
 		cli.OptionTitle("ziggs"),
-		/*		cli.OptionAddKeyBind(cli.KeyBind{
-					Key: cli.Tab,
-					Fn:  cleanSlate,
-				}),
-		*/cli.OptionCompletionOnDown(),
-		/*		cli.OptionAddKeyBind(cli.KeyBind{
-					Key: cli.Down,
-					Fn:  cleanSlate,
-				}),
-		*/)
+		cli.OptionCompletionOnDown(),
+	)
 
 	p.Run()
 }

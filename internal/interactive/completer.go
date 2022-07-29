@@ -15,7 +15,10 @@ func completer(in cli.Document) []cli.Suggest {
 		}
 		tmpl := &cli.Document{Text: command.Text}
 		one := tmpl.GetWordAfterCursor()
-		if one != "" {
+		if one != "" && one != "use" {
+			set = append(set, cli.Suggest{Text: tmpl.Text})
+		}
+		if one == "use" && len(arguments) > 1 {
 			set = append(set, cli.Suggest{Text: tmpl.Text})
 		}
 		for _, a := range arguments {

@@ -13,7 +13,7 @@ import (
 var (
 	saveTermios     unix.Termios
 	saveTermiosFD   int
-	saveTermiosOnce = &sync.Once{}
+	saveTermiosOnce sync.Once
 )
 
 func getOriginalTermios(fd int) (unix.Termios, error) {

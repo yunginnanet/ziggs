@@ -10,10 +10,10 @@ import (
 	"github.com/manifoldco/promptui"
 	"github.com/rs/zerolog"
 
-	"git.tcp.direct/kayos/ziggs/common"
-	"git.tcp.direct/kayos/ziggs/config"
-	"git.tcp.direct/kayos/ziggs/interactive"
-	"git.tcp.direct/kayos/ziggs/ziggy"
+	"git.tcp.direct/kayos/ziggs/internal/common"
+	config2 "git.tcp.direct/kayos/ziggs/internal/config"
+	"git.tcp.direct/kayos/ziggs/internal/interactive"
+	"git.tcp.direct/kayos/ziggs/internal/ziggy"
 )
 
 var (
@@ -21,8 +21,8 @@ var (
 )
 
 func init() {
-	config.Init()
-	log = config.StartLogger()
+	config2.Init()
+	log = config2.StartLogger()
 	log.Info().Msg("Logger started")
 	if len(os.Args) < 1 {
 		return
