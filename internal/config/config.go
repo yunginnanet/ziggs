@@ -9,19 +9,18 @@ import (
 
 	"github.com/rs/zerolog"
 	"github.com/spf13/viper"
+
+	"git.tcp.direct/kayos/ziggs/internal/common"
 )
 
 func init() {
-	if home, err = os.UserHomeDir(); err != nil {
-		panic(err)
-	}
-	prefConfigLocation = home + "/.config/" + Title
+	prefConfigLocation = common.Home + "/.config/" + common.Title
 	Snek = viper.New()
 }
 
 func writeConfig() {
 	if runtime.GOOS == "windows" {
-		newconfig := Title
+		newconfig := common.Title
 		Snek.SetConfigName(newconfig)
 		if err = Snek.MergeInConfig(); err != nil {
 			if err = Snek.SafeWriteConfigAs(newconfig + ".toml"); err != nil {
@@ -81,7 +80,7 @@ func Init() {
 func setDefaults() {
 	var (
 		configSections = []string{"logger", "lights", "http", "ssh", "bridges"}
-		deflogdir      = home + "/.config/" + Title + "/logs/"
+		deflogdir      = common.Home + "/.config/" + common.Title + "/logs/"
 		defNoColor     = false
 	)
 	if runtime.GOOS == "windows" {
@@ -108,7 +107,7 @@ func setDefaults() {
 
 	Opt["ssh"] = map[string]interface{}{
 		"bind_addr":    "127.0.0.1:2222",
-		"host_key_dir": "~/.config/" + Title + "/.ssh",
+		"host_key_dir": "~/.config/" + common.Title + "/.ssh",
 	}
 
 	for _, def := range configSections {
@@ -129,7 +128,7 @@ func setConfigFileLocations() {
 	if runtime.GOOS != "windows" {
 		configLocations = append(configLocations,
 			prefConfigLocation,
-			"/etc/"+Title+"/",
+			"/etc/"+common.Title+"/",
 			"../", "../../")
 	}
 }
@@ -153,10 +152,9 @@ func loadCustomConfig(path string) {
 }
 
 func printUsage() {
-	println("\n" + Title + " v" + Version + " Usage\n")
+	println("\n" + common.Title + " v" + common.Version + " Usage\n")
 	println("-c <config.toml> - Specify config file")
 	println("--nocolor - disable color and banner ")
-	println("--banner - show banner + version and exit")
 	println("--genconfig - write default config to 'default.toml' then exit")
 	os.Exit(0)
 }
@@ -184,7 +182,7 @@ func processOpts() {
 	// string options and their exported variables
 	stringOpt := map[string]*string{
 		"http.bind_addr":   &HTTPBind,
-		"logger.directory": &logDir,
+		"logger.directory": &LogDir,
 		"http.api_key":     &APIKey,
 	}
 	// bool options and their exported variables

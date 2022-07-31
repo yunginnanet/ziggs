@@ -12,6 +12,7 @@ import (
 
 	"git.tcp.direct/kayos/ziggs/internal/common"
 	config2 "git.tcp.direct/kayos/ziggs/internal/config"
+	"git.tcp.direct/kayos/ziggs/internal/data"
 	"git.tcp.direct/kayos/ziggs/internal/interactive"
 	"git.tcp.direct/kayos/ziggs/internal/ziggy"
 )
@@ -117,6 +118,9 @@ func main() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to get bridges")
 	}
+
+	data.Start()
+	defer data.Close()
 
 	for _, arg := range os.Args {
 		switch arg {

@@ -6,13 +6,6 @@ import (
 	"github.com/spf13/viper"
 )
 
-const (
-	// Version roughly represents the applications current version.
-	Version = "0.1"
-	// Title is the name of the application used throughout the configuration process.
-	Title = "ziggs"
-)
-
 var (
 	f   *os.File
 	err error
@@ -20,7 +13,6 @@ var (
 
 var (
 	customconfig    = false
-	home            string
 	configLocations []string
 )
 

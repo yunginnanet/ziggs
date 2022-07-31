@@ -264,9 +264,8 @@ func (c *Bridge) getLights() error {
 func (c *Bridge) Lights() []*HueLight {
 	if len(c.HueLights) > 0 {
 		return c.HueLights
-	} else {
-		_ = c.getLights()
 	}
+	_ = c.getLights()
 	return c.HueLights
 }
 

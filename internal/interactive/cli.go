@@ -46,8 +46,7 @@ func InteractiveAuth() string {
 // Interpret is where we will actuall define our commands
 func executor(cmd string) {
 	cmd = strings.TrimSpace(cmd)
-	var args []string
-	args = strings.Split(cmd, " ")
+	var args = strings.Fields(cmd)
 	switch args[0] {
 	case "quit", "exit":
 		os.Exit(0)
@@ -109,7 +108,6 @@ func executor(cmd string) {
 
 func getHelp(target string) {
 	fmt.Printf("pRaNkeD! (help not available just yet.)\n")
-	return
 	/*
 		var lines []string
 
@@ -173,18 +171,28 @@ var selectedBridge = ""
 
 const bulb = ``
 
+func getHist() []string {
+	return []string{}
+}
+
 func StartCLI() {
 	log = config.GetLogger()
-
-	var hist []string
 	processBridges(ziggy.Lucifer.Bridges)
+	for _, br := range ziggy.Lucifer.Bridges {
+		grpmap, err := getGroupMap(br)
+		if err != nil {
+			log.Warn().Err(err).Msg("error getting group map")
+		} else {
+			processGroups(br, grpmap)
+		}
+	}
 
 	p := cli.New(
 		executor,
 		completer,
 		// cli.OptionPrefixBackgroundColor(cli.Black),
 		cli.OptionPrefixTextColor(cli.Yellow),
-		cli.OptionHistory(hist),
+		cli.OptionHistory(getHist()),
 		cli.OptionSuggestionBGColor(cli.Black),
 		cli.OptionSuggestionTextColor(cli.White),
 		cli.OptionSelectedSuggestionBGColor(cli.Black),
@@ -192,7 +200,7 @@ func StartCLI() {
 		cli.OptionLivePrefix(
 			func() (prefix string, useLivePrefix bool) {
 				sel := "~"
-				if selectedBridge != "" {
+				if len(ziggy.Lucifer.Bridges) > 1 && selectedBridge != "" {
 					sel = selectedBridge
 				}
 				return fmt.Sprintf("ziggs[%s] %s ", sel, bulb), true

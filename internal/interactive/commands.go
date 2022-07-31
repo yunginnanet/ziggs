@@ -78,7 +78,7 @@ func cmdSet(bridge *ziggy.Bridge, args []string) error {
 		Alert(string) error
 	}
 
-	var groupmap map[string]huego.Group
+	var groupmap map[string]*huego.Group
 
 	type action func() error
 	var actions []action
@@ -106,7 +106,7 @@ func cmdSet(bridge *ziggy.Bridge, args []string) error {
 			if !ok {
 				return errors.New("group not found")
 			}
-			target = &g
+			target = g
 		case "on":
 			actions = append(actions, target.On)
 		case "off":
@@ -209,14 +209,14 @@ func cmdSet(bridge *ziggy.Bridge, args []string) error {
 	return nil
 }
 
-func getGroupMap(br *ziggy.Bridge) (map[string]huego.Group, error) {
-	var groupmap = make(map[string]huego.Group)
+func getGroupMap(br *ziggy.Bridge) (map[string]*huego.Group, error) {
+	var groupmap = make(map[string]*huego.Group)
 	gs, err := br.Bridge.GetGroups()
 	if err != nil {
 		return nil, err
 	}
 	for _, g := range gs {
-		groupmap[g.Name] = g
+		groupmap[g.Name] = &g
 	}
 	return groupmap, nil
 }
@@ -245,16 +245,36 @@ var bridgeCMD = map[string]reactor{
 	"set":    cmdSet,
 }
 
-const use = "use"
+type completeMapper map[*cli.Suggest][]cli.Suggest
 
-type completeMapper map[cli.Suggest][]cli.Suggest
+var suggestions completeMapper = make(map[*cli.Suggest][]cli.Suggest)
 
-var suggestions completeMapper = make(map[cli.Suggest][]cli.Suggest)
+func processGroups(br *ziggy.Bridge, grps map[string]*huego.Group) {
+	set := &cli.Suggest{
+		Text: "set",
+	}
+	suggestions[set] = []cli.Suggest{
+		{Text: "light"},
+	}
+
+	/*	for grp, g := range grps {
+		suggestions[set] = append(
+			suggestions[set],
+			cli.Suggest{
+				Text:        grp,
+				Description: br.ID + ": " + g.Type,
+			})
+	}*/
+}
 
 func processBridges(brs map[string]*ziggy.Bridge) {
 	for brd, c := range brs {
-		suggestions[cli.Suggest{Text: "use"}] = append(
-			suggestions[cli.Suggest{Text: "use"}],
+		use := cli.Suggest{
+			Text:        "use",
+			Description: "select bridge to perform actions on",
+		}
+		suggestions[&use] = append(
+			suggestions[&use],
 			cli.Suggest{
 				Text:        brd,
 				Description: c.Host,
