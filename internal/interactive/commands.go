@@ -1,18 +1,31 @@
 package interactive
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"image/color"
 	"strconv"
+	"time"
 
 	cli "git.tcp.direct/Mirrors/go-prompt"
 	"github.com/amimof/huego"
 
+	"git.tcp.direct/kayos/ziggs/internal/system"
 	"git.tcp.direct/kayos/ziggs/internal/ziggy"
 )
 
 var errInvalidFormat = errors.New("invalid format")
+
+var (
+	cpuOn     = false
+	cpuCtx    context.Context
+	cpuCancel context.CancelFunc
+)
+
+func init() {
+	cpuCtx, cpuCancel = context.WithCancel(context.Background())
+}
 
 func ParseHexColorFast(s string) (c color.RGBA, err error) {
 	c.A = 0xff
@@ -173,6 +186,51 @@ func cmdSet(bridge *ziggy.Bridge, args []string) error {
 				}
 				return alErr
 			})
+		case "cpu":
+			switch cpuOn {
+			case false:
+				load, err := system.CPULoadGradient(cpuCtx,
+					"deepskyblue", "seagreen", "darkorchid", "gold", "deeppink")
+				if err != nil {
+					return err
+				}
+				log.Info().Msg("turning CPU load lights on")
+				go func() {
+					cpuOn = true
+					defer func() {
+						cpuOn = false
+					}()
+					cpuTarget := target
+					for {
+						select {
+						case <-cpuCtx.Done():
+							cpuOn = false
+							return
+						default:
+							time.Sleep(2 * time.Second)
+							clr := <-load
+							log.Trace().Msgf("CPU load color: %v", clr.Hex())
+							cHex, cErr := ParseHexColorFast(clr.Hex())
+							if cErr != nil {
+								log.Error().Err(cErr).Msg("failed to parse color")
+								continue
+							}
+							colErr := cpuTarget.Col(cHex)
+							_ = cpuTarget.Bri(100)
+							if colErr != nil {
+								log.Error().Err(colErr).Msg("failed to set color")
+								time.Sleep(3 * time.Second)
+								continue
+							}
+						}
+					}
+				}()
+				return nil
+			case true:
+				log.Info().Msg("turning CPU load lights off")
+				cpuCancel()
+				return nil
+			}
 		default:
 			return fmt.Errorf("unknown argument: " + args[argHead])
 		}

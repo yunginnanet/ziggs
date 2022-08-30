@@ -11,6 +11,8 @@ import (
 	tui "github.com/manifoldco/promptui"
 	"github.com/rs/zerolog"
 
+	"github.com/davecgh/go-spew/spew"
+
 	"git.tcp.direct/kayos/ziggs/internal/common"
 	"git.tcp.direct/kayos/ziggs/internal/config"
 	"git.tcp.direct/kayos/ziggs/internal/ziggy"
@@ -47,6 +49,9 @@ func InteractiveAuth() string {
 func executor(cmd string) {
 	cmd = strings.TrimSpace(cmd)
 	var args = strings.Fields(cmd)
+	if len(args) == 0 {
+		return
+	}
 	switch args[0] {
 	case "quit", "exit":
 		os.Exit(0)
@@ -78,7 +83,12 @@ func executor(cmd string) {
 		getHelp(args[len(args)-1])
 	case "clear":
 		print("\033[H\033[2J")
+	case "debugcompletion":
+		spew.Dump(suggestions)
 	default:
+		if len(args) == 0 {
+			return
+		}
 		bcmd, ok := bridgeCMD[args[0]]
 		if !ok {
 			return
@@ -95,7 +105,12 @@ func executor(cmd string) {
 				return
 			}
 			for _, br := range ziggy.Lucifer.Bridges {
-				go bcmd(br, args[1:])
+				go func(brj *ziggy.Bridge) {
+					err := bcmd(brj, args[1:])
+					if err != nil {
+						log.Error().Err(err).Msg("bridge command failed")
+					}
+				}(br)
 			}
 		} else {
 			err := bcmd(br, args[1:])

@@ -3,10 +3,10 @@ package data
 import (
 	"strings"
 
-	"git.tcp.direct/tcp.direct/database/bitcask"
+	"git.tcp.direct/tcp.direct/database"
 )
 
-func kva() bitcask.Store {
+func kva() database.Store {
 	return kv().With("aliases")
 }
 

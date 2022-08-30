@@ -1,6 +1,7 @@
 package bitcask
 
 import (
+	"errors"
 	"strings"
 	"sync"
 
@@ -13,6 +14,12 @@ import (
 type Store struct {
 	*bitcask.Bitcask
 	database.Searcher
+	closed bool
+}
+
+// Backend returns the underlying bitcask instance.
+func (s Store) Backend() any {
+	return s.Bitcask
 }
 
 // DB is a mapper of a Filer and Searcher implementation using Bitcask.
@@ -20,6 +27,17 @@ type DB struct {
 	store map[string]Store
 	path  string
 	mu    *sync.RWMutex
+}
+
+// AllStores returns a map of the names of all bitcask datastores and the corresponding Filers.
+func (db *DB) AllStores() map[string]database.Filer {
+	db.mu.RLock()
+	defer db.mu.RUnlock()
+	var stores = make(map[string]database.Filer)
+	for n, s := range db.store {
+		stores[n] = s
+	}
+	return stores
 }
 
 // OpenDB will either open an existing set of bitcask datastores at the given directory, or it will create a new one.
@@ -59,7 +77,14 @@ func WithMaxValueSize(size uint64) bitcask.Option {
 }
 
 // Init opens a bitcask store at the given path to be referenced by storeName.
-func (db *DB) Init(storeName string, bitcaskopts ...bitcask.Option) error {
+func (db *DB) Init(storeName string, opts ...any) error {
+	var bitcaskopts []bitcask.Option
+	for _, opt := range opts {
+		if _, ok := opt.(bitcask.Option); !ok {
+			return errors.New("invalid bitcask option type")
+		}
+		bitcaskopts = append(bitcaskopts, opt.(bitcask.Option))
+	}
 	db.mu.Lock()
 	defer db.mu.Unlock()
 
@@ -68,7 +93,7 @@ func (db *DB) Init(storeName string, bitcaskopts ...bitcask.Option) error {
 	}
 
 	if _, ok := db.store[storeName]; ok {
-		return errStoreExists
+		return ErrStoreExists
 	}
 	path := db.Path()
 	if !strings.HasSuffix(db.Path(), "/") {
@@ -83,18 +108,18 @@ func (db *DB) Init(storeName string, bitcaskopts ...bitcask.Option) error {
 }
 
 // With calls the given underlying bitcask instance.
-func (db *DB) With(storeName string) Store {
+func (db *DB) With(storeName string) database.Store {
 	db.mu.RLock()
 	defer db.mu.RUnlock()
 	d, ok := db.store[storeName]
 	if ok {
 		return d
 	}
-	return Store{Bitcask: nil}
+	return nil
 }
 
 // WithNew calls the given underlying bitcask instance, if it doesn't exist, it creates it.
-func (db *DB) WithNew(storeName string) Store {
+func (db *DB) WithNew(storeName string) database.Filer {
 	db.mu.RLock()
 	defer db.mu.RUnlock()
 	d, ok := db.store[storeName]
@@ -116,7 +141,7 @@ func (db *DB) Close(storeName string) error {
 	defer db.mu.Unlock()
 	st, ok := db.store[storeName]
 	if !ok {
-		return errBogusStore
+		return ErrBogusStore
 	}
 	err := st.Close()
 	if err != nil {
@@ -147,23 +172,23 @@ const (
 // In the case of an error, withAll will continue and return a compound form of any errors that occurred.
 // For now this is just for Close and Sync, thusly it does a hard lock on the Keeper.
 func (db *DB) withAll(action withAllAction) error {
-	var errs = make([]error, len(db.store))
-	if len(db.store) < 1 {
-		return errNoStores
+	if db == nil || db.store == nil || len(db.store) < 1 {
+		return ErrNoStores
 	}
+	var errs = make([]error, len(db.store))
 	for name, store := range db.store {
 		var err error
 		if store.Bitcask == nil {
-			errs = append(errs, namedErr(name, errBogusStore))
+			errs = append(errs, namedErr(name, ErrBogusStore))
 			continue
 		}
 		switch action {
 		case dclose:
-			err = namedErr(name, db.Close(name))
+			err = namedErr(name, store.Close())
 		case dsync:
-			err = namedErr(name, db.Sync(name))
+			err = namedErr(name, store.Sync())
 		default:
-			return errUnknownAction
+			return ErrUnknownAction
 		}
 		if err == nil {
 			continue

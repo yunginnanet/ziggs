@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"git.tcp.direct/tcp.direct/database/bitcask"
+	"git.tcp.direct/tcp.direct/database"
 )
 
 const (
@@ -39,7 +39,7 @@ type Targets map[int]string
 
 type Sequence struct {
 	Lines         []string               `json:"lines"`
-	TargetsNeeded map[TargetType]Targets `json:"targets_needed,omitempty""`
+	TargetsNeeded map[TargetType]Targets `json:"targets_needed,omitempty"`
 }
 
 func newSequence() *Sequence {
@@ -52,7 +52,7 @@ func newSequence() *Sequence {
 	}
 }
 
-func kvs() bitcask.Store {
+func kvs() database.Store {
 	return kv().With("sequences")
 }
 
@@ -110,6 +110,9 @@ func ParseRunSequence(input string) (sequence string, targets map[TargetType]map
 	processArgument := func(ttype TargetType, arg, sep string) error {
 		if _, ok := targets[ttype]; !ok {
 			targets[ttype] = make(map[int]string)
+		}
+		if len(arg) == 0 {
+			return fmt.Errorf("invalid %s argument: empty", targetTypeToString(ttype))
 		}
 		val := strings.Split(arg[1:], sep)
 		targetID, numErr := strconv.Atoi(val[0])

@@ -1,17 +1,21 @@
 module git.tcp.direct/kayos/ziggs
 
-go 1.18
+go 1.19
 
 require (
-	git.tcp.direct/Mirrors/go-prompt v0.2.7
-	git.tcp.direct/kayos/common v0.7.0
-	git.tcp.direct/tcp.direct/database v0.0.0-20220724015615-435d1251adad
-	github.com/amimof/huego v1.2.2-0.20220227085811-5668ae651bd8
+	git.tcp.direct/Mirrors/go-prompt v0.3.0
+	git.tcp.direct/kayos/common v0.7.2-0.20220825111102-24fbc6514af5
+	git.tcp.direct/tcp.direct/database v0.0.0-20220829103039-b85255196bd1
+	github.com/amimof/huego v1.2.1
+	github.com/davecgh/go-spew v1.1.1
+	github.com/dhamith93/systats v0.2.0
+	github.com/lucasb-eyer/go-colorful v1.2.0
 	github.com/manifoldco/promptui v0.9.0
+	github.com/mazznoer/colorgrad v0.9.0
 	github.com/rs/zerolog v1.27.0
 	github.com/spf13/viper v1.12.0
-	golang.org/x/net v0.0.0-20220706163947-c90051bbdb60
-	inet.af/netaddr v0.0.0-20211027220019-c74959edd3b6
+	golang.org/x/net v0.0.0-20220520000938-2e3eb7b945c2
+	inet.af/netaddr v0.0.0-20220811202034-502d2d690317
 )
 
 require (
@@ -20,12 +24,15 @@ require (
 	github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e // indirect
 	github.com/fsnotify/fsnotify v1.5.4 // indirect
 	github.com/gofrs/flock v0.8.0 // indirect
+	github.com/hashicorp/errwrap v1.0.0 // indirect
+	github.com/hashicorp/go-multierror v1.0.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/magiconair/properties v1.8.6 // indirect
 	github.com/mattn/go-colorable v0.1.12 // indirect
 	github.com/mattn/go-isatty v0.0.14 // indirect
 	github.com/mattn/go-runewidth v0.0.13 // indirect
 	github.com/mattn/go-tty v0.0.4 // indirect
+	github.com/mazznoer/csscolorparser v0.1.2 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.1 // indirect
@@ -39,7 +46,7 @@ require (
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/subosito/gotenv v1.3.0 // indirect
 	go4.org/intern v0.0.0-20211027215823-ae77deb06f29 // indirect
-	go4.org/unsafe/assume-no-moving-gc v0.0.0-20211027215541-db492cf91b37 // indirect
+	go4.org/unsafe/assume-no-moving-gc v0.0.0-20220617031537-928513b29760 // indirect
 	golang.org/x/exp v0.0.0-20200228211341-fcea875c7e85 // indirect
 	golang.org/x/sys v0.0.0-20220614162138-6c1b26c55098 // indirect
 	golang.org/x/text v0.3.7 // indirect
