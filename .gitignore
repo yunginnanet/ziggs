@@ -3,3 +3,4 @@ assets/
 *.unused
 *.toml
 *.swp
+*.save
