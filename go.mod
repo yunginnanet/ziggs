@@ -12,6 +12,7 @@ require (
 	github.com/lucasb-eyer/go-colorful v1.2.0
 	github.com/manifoldco/promptui v0.9.0
 	github.com/mazznoer/colorgrad v0.9.0
+	github.com/muesli/termenv v0.12.0
 	github.com/rs/zerolog v1.27.0
 	github.com/spf13/viper v1.12.0
 	golang.org/x/net v0.0.0-20220520000938-2e3eb7b945c2

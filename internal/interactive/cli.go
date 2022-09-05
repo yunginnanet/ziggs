@@ -196,9 +196,9 @@ func StartCLI() {
 	for _, br := range ziggy.Lucifer.Bridges {
 		grpmap, err := getGroupMap(br)
 		if err != nil {
-			log.Warn().Err(err).Msg("error getting group map")
+			log.Fatal().Err(err).Msg("error getting group map")
 		} else {
-			processGroups(br, grpmap)
+			processGroups(grpmap)
 		}
 	}
 

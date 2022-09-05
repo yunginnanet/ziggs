@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"image/color"
 	"strconv"
+	"strings"
 	"time"
 
 	cli "git.tcp.direct/Mirrors/go-prompt"
@@ -79,23 +80,27 @@ func cmdSet(bridge *ziggy.Bridge, args []string) error {
 		return errors.New("not enough arguments")
 	}
 
-	var target interface {
-		On() error
-		Off() error
-		Bri(uint8) error
-		Ct(uint16) error
-		Hue(uint16) error
-		Sat(uint8) error
-		Col(color.Color) error
-		SetState(huego.State) error
-		Alert(string) error
-	}
+	type (
+		action   func() error
+		targeted interface {
+			On() error
+			Off() error
+			Bri(uint8) error
+			Ct(uint16) error
+			Hue(uint16) error
+			Sat(uint8) error
+			Col(color.Color) error
+			SetState(huego.State) error
+			Alert(string) error
+		}
+	)
 
-	var groupmap map[string]*huego.Group
-
-	type action func() error
-	var actions []action
-	var currentState *huego.State
+	var (
+		groupmap     map[string]*huego.Group
+		actions      []action
+		currentState *huego.State
+		target       targeted
+	)
 
 	var argHead = -1
 	for range args {
@@ -115,10 +120,13 @@ func cmdSet(bridge *ziggy.Bridge, args []string) error {
 				return errors.New("no group specified")
 			}
 			argHead++
-			g, ok := groupmap[args[argHead]]
+			g, ok := groupmap[strings.TrimSpace(args[argHead])]
 			if !ok {
-				return errors.New("group not found")
+				return fmt.Errorf("group %s not found (argHead: %d)", args[argHead], argHead)
 			}
+			log.Trace().Str("group", g.Name).Msgf("found group %s via args[%d]",
+				args[argHead], argHead,
+			)
 			target = g
 		case "on":
 			actions = append(actions, target.On)
@@ -190,7 +198,7 @@ func cmdSet(bridge *ziggy.Bridge, args []string) error {
 			switch cpuOn {
 			case false:
 				load, err := system.CPULoadGradient(cpuCtx,
-					"deepskyblue", "seagreen", "darkorchid", "gold", "deeppink")
+					"deepskyblue", "gold", "deeppink", "darkorange", "red")
 				if err != nil {
 					return err
 				}
@@ -269,12 +277,17 @@ func cmdSet(bridge *ziggy.Bridge, args []string) error {
 
 func getGroupMap(br *ziggy.Bridge) (map[string]*huego.Group, error) {
 	var groupmap = make(map[string]*huego.Group)
-	gs, err := br.Bridge.GetGroups()
+	gs, err := br.GetGroups()
 	if err != nil {
 		return nil, err
 	}
-	for _, g := range gs {
-		groupmap[g.Name] = &g
+	for i, g := range gs {
+		grp, gerr := br.GetGroup(i)
+		if gerr != nil {
+			log.Warn().Msgf("[%s] %w", g.Name, gerr)
+			continue
+		}
+		groupmap[g.Name] = grp
 	}
 	return groupmap, nil
 }
@@ -287,8 +300,8 @@ func cmdGroups(br *ziggy.Bridge, args []string) error {
 	if len(groupmap) == 0 {
 		return errors.New("no groups found")
 	}
-	for _, g := range groupmap {
-		log.Info().Str("caller", g.Name).Str("type", g.Type).Int("ID", g.ID).
+	for n, g := range groupmap {
+		log.Info().Str("caller", g.Name).Str("mapname", n).Str("type", g.Type).Int("ID", g.ID).
 			Str("class", g.Class).Bool("on", g.IsOn()).Msgf("%v", g.GroupState)
 	}
 	return nil
@@ -307,7 +320,7 @@ type completeMapper map[*cli.Suggest][]cli.Suggest
 
 var suggestions completeMapper = make(map[*cli.Suggest][]cli.Suggest)
 
-func processGroups(br *ziggy.Bridge, grps map[string]*huego.Group) {
+func processGroups(grps map[string]*huego.Group) {
 	set := &cli.Suggest{
 		Text: "set",
 	}
@@ -315,14 +328,14 @@ func processGroups(br *ziggy.Bridge, grps map[string]*huego.Group) {
 		{Text: "light"},
 	}
 
-	/*	for grp, g := range grps {
+	for grp, g := range grps {
 		suggestions[set] = append(
 			suggestions[set],
 			cli.Suggest{
 				Text:        grp,
-				Description: br.ID + ": " + g.Type,
+				Description: g.Type,
 			})
-	}*/
+	}
 }
 
 func processBridges(brs map[string]*ziggy.Bridge) {

@@ -14,7 +14,7 @@ func cpuLoad(ctx context.Context) (chan int, error) {
 	loadChan := make(chan int, 10)
 	go func() {
 		for {
-			time.Sleep(250 * time.Millisecond)
+			time.Sleep(2 * time.Second)
 			cpu, err := syStats.GetCPU()
 			if err != nil {
 				return
@@ -33,7 +33,7 @@ func cpuLoad(ctx context.Context) (chan int, error) {
 func CPULoadGradient(ctx context.Context, colors ...string) (chan colorful.Color, error) {
 	grad, err := colorgrad.NewGradient().
 		HtmlColors(colors...).
-		Domain(0, 100).
+		Domain(0, 75).
 		Build()
 	if err != nil {
 		return nil, err
