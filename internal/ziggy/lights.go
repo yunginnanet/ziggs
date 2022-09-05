@@ -28,6 +28,7 @@ type Meta struct {
 	Bridges  map[string]*Bridge
 	Lights   map[string]*HueLight
 	Switches map[string]*huego.Sensor
+	Groups   map[string]*huego.Group
 	*sync.RWMutex
 }
 
@@ -255,7 +256,11 @@ func (c *Bridge) getLights() error {
 		newlight.Log().Trace().Msg("+")
 		c.HueLights = append(c.HueLights, newlight)
 		Lucifer.Lock()
-		Lucifer.Lights[light.UniqueID] = newlight
+		name := strings.ReplaceAll(newlight.Name, " ", "_")
+		if _, ok := Lucifer.Lights[name]; ok {
+			name = fmt.Sprintf("%s_%d", name, 1)
+		}
+		Lucifer.Lights[name] = newlight
 		Lucifer.Unlock()
 	}
 	return nil

@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"time"
 
-	cli "git.tcp.direct/Mirrors/go-prompt"
 	"github.com/amimof/huego"
+	"github.com/davecgh/go-spew/spew"
 
 	"git.tcp.direct/kayos/ziggs/internal/system"
 	"git.tcp.direct/kayos/ziggs/internal/ziggy"
@@ -22,10 +22,6 @@ var (
 	cpuCtx    context.Context
 	cpuCancel context.CancelFunc
 )
-
-func init() {
-	cpuCtx, cpuCancel = context.WithCancel(context.Background())
-}
 
 func ParseHexColorFast(s string) (c color.RGBA, err error) {
 	c.A = 0xff
@@ -74,30 +70,35 @@ func cmdLights(br *ziggy.Bridge, args []string) error {
 	return nil
 }
 
+type cmdTarget interface {
+	On() error
+	Off() error
+	Bri(uint8) error
+	Ct(uint16) error
+	Hue(uint16) error
+	Sat(uint8) error
+	Col(color.Color) error
+	SetState(huego.State) error
+	Alert(string) error
+}
+
 func cmdSet(bridge *ziggy.Bridge, args []string) error {
 	if len(args) < 3 {
 		return errors.New("not enough arguments")
 	}
 
-	var target interface {
-		On() error
-		Off() error
-		Bri(uint8) error
-		Ct(uint16) error
-		Hue(uint16) error
-		Sat(uint8) error
-		Col(color.Color) error
-		SetState(huego.State) error
-		Alert(string) error
-	}
+	type (
+		action func() error
+	)
 
-	var groupmap map[string]*huego.Group
+	var (
+		groupmap     map[string]*huego.Group
+		actions      []action
+		currentState *huego.State
+		argHead      = -1
+		target       cmdTarget
+	)
 
-	type action func() error
-	var actions []action
-	var currentState *huego.State
-
-	var argHead = -1
 	for range args {
 		argHead++
 		if len(args) <= argHead {
@@ -107,7 +108,7 @@ func cmdSet(bridge *ziggy.Bridge, args []string) error {
 		switch args[argHead] {
 		case "group", "g", "grp":
 			var err error
-			groupmap, err = getGroupMap(bridge)
+			groupmap, err = getGroupMap()
 			if err != nil {
 				return err
 			}
@@ -119,6 +120,7 @@ func cmdSet(bridge *ziggy.Bridge, args []string) error {
 			if !ok {
 				return errors.New("group not found")
 			}
+
 			target = g
 		case "on":
 			actions = append(actions, target.On)
@@ -189,34 +191,32 @@ func cmdSet(bridge *ziggy.Bridge, args []string) error {
 		case "cpu":
 			switch cpuOn {
 			case false:
+				cpuCtx, cpuCancel = context.WithCancel(context.Background())
 				load, err := system.CPULoadGradient(cpuCtx,
 					"deepskyblue", "seagreen", "darkorchid", "gold", "deeppink")
 				if err != nil {
 					return err
 				}
-				log.Info().Msg("turning CPU load lights on")
-				go func() {
+				log.Info().Msg("turning CPU load lights on for ")
+				go func(cpuTarget cmdTarget) {
 					cpuOn = true
 					defer func() {
 						cpuOn = false
 					}()
-					cpuTarget := target
 					for {
 						select {
 						case <-cpuCtx.Done():
 							cpuOn = false
 							return
-						default:
-							time.Sleep(2 * time.Second)
-							clr := <-load
+						case clr := <-load:
 							log.Trace().Msgf("CPU load color: %v", clr.Hex())
 							cHex, cErr := ParseHexColorFast(clr.Hex())
 							if cErr != nil {
 								log.Error().Err(cErr).Msg("failed to parse color")
 								continue
 							}
+
 							colErr := cpuTarget.Col(cHex)
-							_ = cpuTarget.Bri(100)
 							if colErr != nil {
 								log.Error().Err(colErr).Msg("failed to set color")
 								time.Sleep(3 * time.Second)
@@ -224,7 +224,7 @@ func cmdSet(bridge *ziggy.Bridge, args []string) error {
 							}
 						}
 					}
-				}()
+				}(target)
 				return nil
 			case true:
 				log.Info().Msg("turning CPU load lights off")
@@ -241,13 +241,15 @@ func cmdSet(bridge *ziggy.Bridge, args []string) error {
 	if target == nil {
 		return errors.New("no target specified")
 	}
-	tg, tgok := target.(*huego.Group)
-	tl, tlok := target.(*huego.Light)
+	tgroup, tgok := target.(*huego.Group)
+	tlight, tlok := target.(*huego.Light)
 	switch {
 	case tgok:
-		currentState = tg.State
+		currentState = tgroup.State
 	case tlok:
-		currentState = tl.State
+		currentState = tlight.State
+	default:
+		return errors.New("unknown target")
 	}
 	log.Trace().Msgf("current state: %v", currentState)
 	for d, act := range actions {
@@ -258,84 +260,61 @@ func cmdSet(bridge *ziggy.Bridge, args []string) error {
 		}
 		switch {
 		case tgok:
-			currentState = tg.State
+			currentState = tgroup.State
 		case tlok:
-			currentState = tl.State
+			currentState = tlight.State
 		}
 		log.Trace().Msgf("new state: %v", currentState)
 	}
 	return nil
 }
 
-func getGroupMap(br *ziggy.Bridge) (map[string]*huego.Group, error) {
+func getGroupMap() (map[string]*huego.Group, error) {
 	var groupmap = make(map[string]*huego.Group)
-	gs, err := br.Bridge.GetGroups()
-	if err != nil {
-		return nil, err
-	}
-	for _, g := range gs {
-		groupmap[g.Name] = &g
+	for _, br := range ziggy.Lucifer.Bridges {
+		groups, err := br.GetGroups()
+		log.Trace().Msgf(spew.Sprint(groups))
+		if err != nil {
+			return nil, err
+		}
+		for _, group := range groups {
+			groupName := group.Name
+			var count = 1
+			for _, ok := groupmap[groupName]; ok; _, ok = groupmap[groupName] {
+				groupName = fmt.Sprintf("%s_%d", group.Name, count)
+			}
+			groupmap[groupName] = &group
+		}
 	}
 	return groupmap, nil
 }
 
+func getLightMap(br *ziggy.Bridge) (map[string]*huego.Light, error) {
+	var lightmap = make(map[string]*huego.Light)
+	ls, err := br.Bridge.GetLights()
+	if err != nil {
+		return nil, err
+	}
+	for _, l := range ls {
+		lightmap[l.Name] = &l
+	}
+	return lightmap, nil
+}
+
 func cmdGroups(br *ziggy.Bridge, args []string) error {
-	groupmap, err := getGroupMap(br)
+	groupmap, err := getGroupMap()
 	if err != nil {
 		return err
 	}
 	if len(groupmap) == 0 {
 		return errors.New("no groups found")
 	}
-	for _, g := range groupmap {
-		log.Info().Str("caller", g.Name).Str("type", g.Type).Int("ID", g.ID).
-			Str("class", g.Class).Bool("on", g.IsOn()).Msgf("%v", g.GroupState)
+	for n, g := range groupmap {
+		if n != g.Name {
+			log.Warn().Msgf("group name mismatch: %s != %s", n, g.Name)
+		}
+		slog := log.With().Str("caller", g.Name).Int("ID", g.ID).Logger()
+		slog.Info().Msgf("\n\tType: %v\n\tClass: %v\n\t%v", g.Type, g.Class, spew.Sprint(g.State))
 	}
 	return nil
-}
-
-type reactor func(bridge *ziggy.Bridge, args []string) error
-
-var bridgeCMD = map[string]reactor{
-	"scan":   cmdScan,
-	"lights": cmdLights,
-	"groups": cmdGroups,
-	"set":    cmdSet,
-}
-
-type completeMapper map[*cli.Suggest][]cli.Suggest
-
-var suggestions completeMapper = make(map[*cli.Suggest][]cli.Suggest)
-
-func processGroups(br *ziggy.Bridge, grps map[string]*huego.Group) {
-	set := &cli.Suggest{
-		Text: "set",
-	}
-	suggestions[set] = []cli.Suggest{
-		{Text: "light"},
-	}
-
-	/*	for grp, g := range grps {
-		suggestions[set] = append(
-			suggestions[set],
-			cli.Suggest{
-				Text:        grp,
-				Description: br.ID + ": " + g.Type,
-			})
-	}*/
-}
-
-func processBridges(brs map[string]*ziggy.Bridge) {
-	for brd, c := range brs {
-		use := cli.Suggest{
-			Text:        "use",
-			Description: "select bridge to perform actions on",
-		}
-		suggestions[&use] = append(
-			suggestions[&use],
-			cli.Suggest{
-				Text:        brd,
-				Description: c.Host,
-			})
-	}
 }

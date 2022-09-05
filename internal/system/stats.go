@@ -14,7 +14,7 @@ func cpuLoad(ctx context.Context) (chan int, error) {
 	loadChan := make(chan int, 10)
 	go func() {
 		for {
-			time.Sleep(250 * time.Millisecond)
+			time.Sleep(2 * time.Second)
 			cpu, err := syStats.GetCPU()
 			if err != nil {
 				return
