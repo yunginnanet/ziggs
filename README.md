@@ -25,4 +25,4 @@ It's really bad.
 
 ---
 
-I use this every day to ~~inflict pain upon myself~~ to control the lights inside and outside of my house.
+I use this every day to ~~inflict pain upon myself~~ control the lights inside and outside of my house.
