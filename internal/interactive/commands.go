@@ -36,13 +36,10 @@ var bridgeCMD = map[string]reactor{
 }
 
 func cmdLights(br *ziggy.Bridge, args []string) error {
-	if len(br.HueLights) == 0 {
-		return errors.New("no lights found")
-	}
-	for _, l := range br.HueLights {
-		log.Info().Str("caller", l.Name).
+	for name, l := range ziggy.GetLightMap() {
+		log.Info().
 			Int("ID", l.ID).Str("type", l.ProductName).
-			Str("model", l.ModelID).Bool("on", l.IsOn()).Msgf("%v", l.State)
+			Str("model", l.ModelID).Bool("on", l.IsOn()).Msgf("[+] %s", name)
 	}
 	return nil
 }
@@ -156,7 +153,8 @@ func cmdSet(bridge *ziggy.Bridge, args []string) error {
 	)
 
 	var (
-		groupmap     map[string]*huego.Group
+		groupMap     map[string]*huego.Group
+		lightMap     map[string]*huego.Light
 		actions      []action
 		currentState *huego.State
 		argHead      = -1
@@ -170,9 +168,9 @@ func cmdSet(bridge *ziggy.Bridge, args []string) error {
 		}
 		log.Trace().Int("argHead", argHead).Msg(args[argHead])
 		switch args[argHead] {
-		case "group", "g", "grp":
+		case "group", "g":
 			var err error
-			groupmap, err = getGroupMap()
+			groupMap, err = ziggy.GetGroupMap()
 			if err != nil {
 				return err
 			}
@@ -180,7 +178,7 @@ func cmdSet(bridge *ziggy.Bridge, args []string) error {
 				return errors.New("no group specified")
 			}
 			argHead++
-			g, ok := groupmap[strings.TrimSpace(args[argHead])]
+			g, ok := groupMap[strings.TrimSpace(args[argHead])]
 			if !ok {
 				return fmt.Errorf("group %s not found (argHead: %d)", args[argHead], argHead)
 			}
@@ -188,6 +186,21 @@ func cmdSet(bridge *ziggy.Bridge, args []string) error {
 				args[argHead], argHead,
 			)
 			target = g
+		case "light", "l":
+			lightMap = ziggy.GetLightMap()
+			if len(args) <= argHead-1 {
+				return errors.New("no light specified")
+			}
+			argHead++
+			l, ok := lightMap[strings.TrimSpace(args[argHead])]
+			if !ok {
+				return fmt.Errorf("light %s not found (argHead: %d)", args[argHead], argHead)
+			}
+			if extraDebug {
+				log.Trace().Str("group", l.Name).Msgf("found light %s via args[%d]",
+					args[argHead], argHead)
+			}
+			target = l
 		case "on":
 			actions = append(actions, target.On)
 		case "off":
@@ -339,33 +352,8 @@ func cmdSet(bridge *ziggy.Bridge, args []string) error {
 	return nil
 }
 
-func getGroupMap() (map[string]*huego.Group, error) {
-	var groupmap = make(map[string]*huego.Group)
-	for _, br := range ziggy.Lucifer.Bridges {
-		gs, err := br.GetGroups()
-		if err != nil {
-			return nil, err
-		}
-		for i, g := range gs {
-			grp, gerr := br.GetGroup(i)
-			if gerr != nil {
-				log.Warn().Msgf("[%s] %w", g.Name, gerr)
-				continue
-			}
-			var count = 1
-			groupName := g.Name
-			for _, ok := groupmap[groupName]; ok; _, ok = groupmap[groupName] {
-				groupName = fmt.Sprintf("%s_%d", g.Name, count)
-			}
-			groupmap[groupName] = grp
-		}
-
-	}
-	return groupmap, nil
-}
-
 func cmdGroups(br *ziggy.Bridge, args []string) error {
-	groupmap, err := getGroupMap()
+	groupmap, err := ziggy.GetGroupMap()
 	if err != nil {
 		return err
 	}

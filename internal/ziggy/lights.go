@@ -44,7 +44,7 @@ var Lucifer = Meta{
 type Bridge struct {
 	config    *config.KnownBridge
 	Info      *huego.Config
-	HueLights []*HueLight
+	HueLights []*huego.Light
 	*huego.Bridge
 	*sync.RWMutex
 }
@@ -58,16 +58,20 @@ func (c *Bridge) Log() *zerolog.Logger {
 }
 
 type HueLight struct {
-	huego.Light
+	l          huego.Light
 	controller *Bridge
 }
 
 func (hl *HueLight) Log() *zerolog.Logger {
 	l := log.With().
-		Int("caller", hl.ID).
-		Str("name", hl.Name).
-		Bool("on", hl.IsOn()).Logger()
+		Int("caller", hl.l.ID).
+		Str("name", hl.l.Name).
+		Bool("on", hl.l.IsOn()).Logger()
 	return &l
+}
+
+func (hl *HueLight) GetPtr() (*huego.Light, error) {
+	return hl.controller.GetLight(hl.l.ID)
 }
 
 func getProxiedBridge(cridge *config.KnownBridge) *huego.Bridge {
@@ -125,12 +129,12 @@ const (
 	Toggle
 )
 
-type lCall func(light *HueLight) (checkFunc, error)
-type checkFunc func(light *HueLight) bool
+type lCall func(light *huego.Light) (checkFunc, error)
+type checkFunc func(light *huego.Light) bool
 
 var lightCallbacks = map[ToggleMode]lCall{
-	ToggleOn: func(light *HueLight) (checkFunc, error) {
-		return func(light *HueLight) bool {
+	ToggleOn: func(light *huego.Light) (checkFunc, error) {
+		return func(light *huego.Light) bool {
 				light.State = &huego.State{
 					On:     true,
 					Bri:    100,
@@ -144,8 +148,8 @@ var lightCallbacks = map[ToggleMode]lCall{
 			},
 			light.On()
 	},
-	ToggleOff: func(light *HueLight) (checkFunc, error) {
-		return func(light *HueLight) bool {
+	ToggleOff: func(light *huego.Light) (checkFunc, error) {
+		return func(light *huego.Light) bool {
 				light.State = &huego.State{
 					On:     false,
 					Bri:    100,
@@ -159,8 +163,8 @@ var lightCallbacks = map[ToggleMode]lCall{
 			},
 			light.Off()
 	},
-	/*	ToggleDim: func(light *HueLight) (checkFunc, error) {
-		return func(light *HueLight) bool {
+	/*	ToggleDim: func(light *huego.Light) (checkFunc, error) {
+		return func(light *huego.Light) bool {
 				if !light.IsOn() {
 					return false
 				}
@@ -168,8 +172,8 @@ var lightCallbacks = map[ToggleMode]lCall{
 			},
 			light.On()
 	},*/
-	ToggleRainbow: func(light *HueLight) (checkFunc, error) {
-		return func(light *HueLight) bool {
+	ToggleRainbow: func(light *huego.Light) (checkFunc, error) {
+		return func(light *huego.Light) bool {
 				if !light.IsOn() {
 					return false
 				}
@@ -179,12 +183,17 @@ var lightCallbacks = map[ToggleMode]lCall{
 	},
 }
 
-func Assert(ctx context.Context, l *HueLight, mode ToggleMode) error {
+func Assert(ctx context.Context, l *huego.Light, mode ToggleMode) error {
 	act, ok := lightCallbacks[mode]
 	if !ok {
 		panic("not implemented")
 	}
 
+	/*	l, err := lo.GetPtr()
+		if err != nil {
+			return err
+		}
+	*/
 	for {
 		select {
 		case <-ctx.Done():
@@ -203,13 +212,13 @@ func Assert(ctx context.Context, l *HueLight, mode ToggleMode) error {
 	}
 }
 
-func toggle(l *HueLight, mode ToggleMode) error {
-	on := func(l *HueLight) error {
-		l.Log().Trace().Msg("turning light on...")
+func toggle(l *huego.Light, mode ToggleMode) error {
+	on := func(l *huego.Light) error {
+		log.Trace().Msg("turning light on...")
 		return l.On()
 	}
-	off := func(l *HueLight) error {
-		l.Log().Trace().Msg("turning light off...")
+	off := func(l *huego.Light) error {
+		log.Trace().Msg("turning light off...")
 		return l.Off()
 	}
 	var err error
@@ -230,11 +239,11 @@ func toggle(l *HueLight, mode ToggleMode) error {
 	return err
 }
 
-func ToggleLights(Lights []*HueLight, mode ToggleMode) {
+func ToggleLights(Lights []*huego.Light, mode ToggleMode) {
 	for _, l := range Lights {
 		err := toggle(l, mode)
 		if err != nil {
-			l.Log().Error().Err(err).Bool("On", l.IsOn()).Msg("failed to toggle light")
+			log.Error().Err(err).Bool("On", l.IsOn()).Msg("failed to toggle light")
 		}
 	}
 }
@@ -250,19 +259,19 @@ func (c *Bridge) getLights() error {
 	c.Log().Info().Msgf("Found %d lights", len(l))
 	for _, light := range l {
 		newlight := &HueLight{
-			Light:      light,
+			l:          light,
 			controller: c,
 		}
-		newlight.Log().Trace().Msg("+")
-		c.HueLights = append(c.HueLights, newlight)
+		log.Trace().Interface("new light", newlight.l).Msg("+")
+		c.HueLights = append(c.HueLights, &newlight.l)
 		Lucifer.Lock()
-		Lucifer.Lights[light.UniqueID] = newlight
+		Lucifer.Lights[light.Name] = newlight
 		Lucifer.Unlock()
 	}
 	return nil
 }
 
-func (c *Bridge) Lights() []*HueLight {
+func (c *Bridge) Lights() []*huego.Light {
 	if len(c.HueLights) > 0 {
 		return c.HueLights
 	}

@@ -101,9 +101,19 @@ func init() {
 		{Suggest: cli.Suggest{Text: "light", Description: "target light"}},
 	}
 	for _, sug := range suggestions[1] {
-		sug.requires = map[int][]string{0: {"set", "s"}}
+		sug.requires = map[int][]string{0: {"delete", "del", "set", "s"}}
 		sug.root = false
 	}
+	delCompletion := []completion{
+		{Suggest: cli.Suggest{Text: "scene", Description: "target scene"}},
+		{Suggest: cli.Suggest{Text: "schedule", Description: "target schedule"}},
+		{Suggest: cli.Suggest{Text: "sensor", Description: "target sensor"}},
+	}
+	for _, sug := range delCompletion {
+		sug.requires = map[int][]string{0: {"delete", "del"}}
+		sug.root = false
+	}
+	suggestions[1] = append(suggestions[1], delCompletion...)
 }
 
 func processGroups(grps map[string]*huego.Group) {
@@ -119,7 +129,7 @@ func processGroups(grps map[string]*huego.Group) {
 					Description: "Group" + suffix,
 				},
 				requires: map[int][]string{
-					0: {"set", "s"},
+					0: {"set", "s", "delete", "del"},
 					1: {"group", "g"},
 				},
 				root: false,
@@ -128,7 +138,7 @@ func processGroups(grps map[string]*huego.Group) {
 }
 
 func processLights() {
-	for lt, l := range ziggy.Lucifer.Lights {
+	for lt, l := range ziggy.GetLightMap() {
 		suffix := ""
 		if l.Type != "" {
 			suffix = " (" + l.Type + ")"
@@ -140,7 +150,7 @@ func processLights() {
 					Description: "Light" + suffix,
 				},
 				requires: map[int][]string{
-					0: {"set", "s"},
+					0: {"set", "s", "delete", "del"},
 					1: {"light", "l"},
 				},
 				root: false,
