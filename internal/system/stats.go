@@ -33,7 +33,7 @@ func cpuLoad(ctx context.Context) (chan int, error) {
 func CPULoadGradient(ctx context.Context, colors ...string) (chan colorful.Color, error) {
 	grad, err := colorgrad.NewGradient().
 		HtmlColors(colors...).
-		Domain(0, 75).
+		Domain(0, 80).
 		Build()
 	if err != nil {
 		return nil, err

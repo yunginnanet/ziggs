@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	cli "git.tcp.direct/Mirrors/go-prompt"
@@ -18,7 +19,11 @@ import (
 	"git.tcp.direct/kayos/ziggs/internal/ziggy"
 )
 
-var log *zerolog.Logger
+var (
+	log        *zerolog.Logger
+	prompt     *cli.Prompt
+	extraDebug = false
+)
 
 func validate(input string) error {
 	if len(strings.TrimSpace(input)) < 1 {
@@ -26,6 +31,59 @@ func validate(input string) error {
 	}
 	return nil
 }
+
+type Selection struct {
+	Bridge string
+	Action string
+	Target struct {
+		Type string
+		Name string
+	}
+}
+
+type pool struct {
+	p *sync.Pool
+}
+
+var stringers = pool{p: &sync.Pool{
+	New: func() interface{} {
+		return &strings.Builder{}
+	}}}
+
+func (p *pool) Get() *strings.Builder {
+	return p.p.Get().(*strings.Builder)
+}
+
+func (p *pool) Put(sb *strings.Builder) {
+	sb.Reset()
+	p.p.Put(sb)
+}
+
+func (s *Selection) String() string {
+	if s.Bridge == "" && s.Action == "" {
+		return "~"
+	}
+	builder := stringers.Get()
+	builder.WriteString(s.Bridge)
+	if s.Action != "" {
+		builder.WriteString("/")
+		builder.WriteString(s.Action)
+	}
+	if s.Target.Type != "" {
+		builder.WriteString("/")
+		builder.WriteString(s.Target.Type)
+		builder.WriteString("s")
+	}
+	if s.Target.Name != "" {
+		builder.WriteString("/")
+		builder.WriteString(s.Target.Name)
+	}
+	res := builder.String()
+	stringers.Put(builder)
+	return res
+}
+
+var sel = &Selection{}
 
 func InteractiveAuth() string {
 	passPrompt := tui.Prompt{
@@ -56,6 +114,9 @@ func executor(cmd string) {
 	case "quit", "exit":
 		os.Exit(0)
 	case "use":
+		if len(ziggy.Lucifer.Bridges) < 2 {
+			return
+		}
 		if len(args) < 2 {
 			println("use: use <bridge>")
 			return
@@ -63,8 +124,8 @@ func executor(cmd string) {
 		if br, ok := ziggy.Lucifer.Bridges[args[1]]; !ok {
 			println("invalid bridge: " + args[1])
 		} else {
-			selectedBridge = args[1]
-			log.Info().Str("host", br.Host).Int("lights", len(br.HueLights)).Msg("switched to bridge: " + selectedBridge)
+			sel.Bridge = args[1]
+			log.Info().Str("host", br.Host).Int("lights", len(br.HueLights)).Msg("switched to bridge: " + sel.Bridge)
 		}
 	case "debug":
 		levelsdebug := map[string]zerolog.Level{"info": zerolog.InfoLevel, "debug": zerolog.DebugLevel, "trace": zerolog.TraceLevel}
@@ -74,6 +135,8 @@ func executor(cmd string) {
 		}
 		if newlevel, ok := levelsdebug[args[1]]; ok {
 			zerolog.SetGlobalLevel(newlevel)
+		} else {
+			println("invalid argument: " + args[1])
 		}
 	case "help":
 		if len(args) < 2 {
@@ -83,7 +146,12 @@ func executor(cmd string) {
 		getHelp(args[len(args)-1])
 	case "clear":
 		print("\033[H\033[2J")
-	case "debugcompletion":
+	case "debugcli":
+		if extraDebug {
+			extraDebug = false
+		} else {
+			extraDebug = true
+		}
 		spew.Dump(suggestions)
 	default:
 		if len(args) == 0 {
@@ -93,14 +161,14 @@ func executor(cmd string) {
 		if !ok {
 			return
 		}
-		br, ok := ziggy.Lucifer.Bridges[selectedBridge]
-		if selectedBridge == "" || !ok {
-			prompt := tui.Select{
+		br, ok := ziggy.Lucifer.Bridges[sel.Bridge]
+		if sel.Bridge == "" || !ok {
+			q := tui.Select{
 				Label:   "Send to all known bridges?",
 				Items:   []string{"yes", "no"},
 				Pointer: common.ZiggsPointer,
 			}
-			_, ch, _ := prompt.Run()
+			_, ch, _ := q.Run()
 			if ch != "yes" {
 				return
 			}
@@ -192,17 +260,14 @@ func getHist() []string {
 
 func StartCLI() {
 	log = config.GetLogger()
-	processBridges(ziggy.Lucifer.Bridges)
-	for _, br := range ziggy.Lucifer.Bridges {
-		grpmap, err := getGroupMap(br)
-		if err != nil {
-			log.Fatal().Err(err).Msg("error getting group map")
-		} else {
-			processGroups(grpmap)
-		}
+	processBridges()
+	grpmap, err := getGroupMap()
+	if err != nil {
+		log.Fatal().Err(err).Msg("error getting group map")
 	}
-
-	p := cli.New(
+	processGroups(grpmap)
+	processLights()
+	prompt = cli.New(
 		executor,
 		completer,
 		// cli.OptionPrefixBackgroundColor(cli.Black),
@@ -214,15 +279,16 @@ func StartCLI() {
 		cli.OptionSelectedSuggestionTextColor(cli.Green),
 		cli.OptionLivePrefix(
 			func() (prefix string, useLivePrefix bool) {
-				sel := "~"
-				if len(ziggy.Lucifer.Bridges) > 1 && selectedBridge != "" {
-					sel = selectedBridge
+				if len(ziggy.Lucifer.Bridges) == 1 {
+					for brid, _ := range ziggy.Lucifer.Bridges {
+						sel.Bridge = brid
+					}
 				}
-				return fmt.Sprintf("ziggs[%s] %s ", sel, bulb), true
+				return fmt.Sprintf("ziggs[%s] %s ", sel.String(), bulb), true
 			}),
 		cli.OptionTitle("ziggs"),
 		cli.OptionCompletionOnDown(),
 	)
 
-	p.Run()
+	prompt.Run()
 }

@@ -28,6 +28,7 @@ type Meta struct {
 	Bridges  map[string]*Bridge
 	Lights   map[string]*HueLight
 	Switches map[string]*huego.Sensor
+	Groups   map[string]int
 	*sync.RWMutex
 }
 
