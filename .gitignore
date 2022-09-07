@@ -4,3 +4,4 @@ assets/
 *.toml
 *.swp
 *.test
+*.save
