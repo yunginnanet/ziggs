@@ -19,8 +19,8 @@ func GetGroupMap() (map[string]*huego.Group, error) {
 		if err != nil {
 			return nil, err
 		}
-		for i, g := range gs {
-			grp, gerr := br.GetGroup(i)
+		for _, g := range gs {
+			grp, gerr := br.GetGroup(g.ID)
 			if gerr != nil {
 				log.Warn().Msgf("[%s] %w", g.Name, gerr)
 				continue

@@ -21,6 +21,7 @@ var (
 	cpuOn      = false
 	cpuCtx     context.Context
 	cpuCancel  context.CancelFunc
+	cpuLastCol string
 	brightness uint8 = 0
 )
 
@@ -289,6 +290,10 @@ func cmdSet(bridge *ziggy.Bridge, args []string) error {
 							return
 						case clr := <-load:
 							time.Sleep(2 * time.Second)
+							if clr.Hex() == cpuLastCol {
+								continue
+							}
+							cpuLastCol = clr.Hex()
 							log.Trace().Msgf("CPU load color: %v", clr.Hex())
 							cHex, cErr := common.ParseHexColorFast(clr.Hex())
 							if cErr != nil {
