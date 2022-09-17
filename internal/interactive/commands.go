@@ -31,6 +31,7 @@ var bridgeCMD = map[string]reactor{
 	"lights":    cmdLights,
 	"groups":    cmdGroups,
 	"delete":    cmdDelete,
+	"rename":    cmdRename,
 	"rules":     cmdRules,
 	"scan":      cmdScan,
 	"set":       cmdSet,
@@ -126,6 +127,99 @@ func cmdDelete(br *ziggy.Bridge, args []string) error {
 		if confirm() {
 			return br.DeleteSensor(argID)
 		}
+	default:
+		return errors.New("invalid target type")
+	}
+	return nil
+}
+
+func cmdRename(br *ziggy.Bridge, args []string) error {
+	if len(args) < 3 {
+		return errors.New("not enough arguments")
+	}
+	argID, err := strconv.Atoi(args[1])
+	if err != nil {
+		return err
+	}
+
+	switch args[0] {
+	case "light":
+		resp, err := br.UpdateLight(argID, huego.Light{Name: args[2]})
+		if err != nil {
+			return err
+		}
+		log.Info().Msgf("response: %v", resp)
+	case "group":
+		resp, err := br.UpdateGroup(argID, huego.Group{Name: args[2]})
+		if err != nil {
+			return err
+		}
+		log.Info().Msgf("response: %v", resp)
+	case "schedule":
+		resp, err := br.UpdateSchedule(argID, &huego.Schedule{Name: args[2]})
+		if err != nil {
+			return err
+		}
+		log.Info().Msgf("response: %v", resp)
+	case "rule":
+		resp, err := br.UpdateRule(argID, &huego.Rule{Name: args[2]})
+		if err != nil {
+			return err
+		}
+		log.Info().Msgf("response: %v", resp)
+	case "sensor":
+		resp, err := br.UpdateSensor(argID, &huego.Sensor{Name: args[2]})
+		if err != nil {
+			return err
+		}
+		log.Info().Msgf("response: %v", resp)
+	default:
+		return errors.New("invalid target type")
+	}
+	return nil
+}
+
+func cmdCreate(br *ziggy.Bridge, args []string) error {
+	if len(args) < 2 {
+		return errors.New("not enough arguments")
+	}
+	switch args[0] {
+	case "group":
+		var name = args[1]
+		var ids []string
+		for _, arg := range args {
+			if arg == "group" || arg == name {
+				continue
+			}
+			_, err := strconv.Atoi(arg)
+			if err != nil {
+				return err
+			}
+			ids = append(ids, arg)
+		}
+		resp, err := br.CreateGroup(huego.Group{Name: name, Lights: ids})
+		if err != nil {
+			return err
+		}
+		log.Info().Msgf("response: %v", resp)
+	case "schedule":
+		resp, err := br.CreateSchedule(&huego.Schedule{Name: args[1]})
+		if err != nil {
+			return err
+		}
+		log.Info().Msgf("response: %v", resp)
+	case "rule":
+		resp, err := br.CreateRule(&huego.Rule{Name: args[1]})
+		if err != nil {
+			return err
+		}
+		log.Info().Msgf("response: %v", resp)
+	case "sensor":
+		resp, err := br.CreateSensor(&huego.Sensor{Name: args[1]})
+		if err != nil {
+			return err
+		}
+		log.Info().Msgf("response: %v", resp)
 	default:
 		return errors.New("invalid target type")
 	}
@@ -228,7 +322,7 @@ func cmdSet(bridge *ziggy.Bridge, args []string) error {
 				}
 				return err
 			})
-		case "brightness":
+		case "brightness", "bri":
 			if len(args) == argHead-1 {
 				return errors.New("no brightness specified")
 			}
@@ -259,6 +353,54 @@ func cmdSet(bridge *ziggy.Bridge, args []string) error {
 					colErr = fmt.Errorf("failed to set color: %w", colErr)
 				}
 				return colErr
+			})
+		case "hue", "h":
+			if len(args) == argHead-1 {
+				return errors.New("not enough arguments")
+			}
+			argHead++
+			newHue, numErr := strconv.Atoi(args[argHead])
+			if numErr != nil || newHue > 65535 || newHue < 0 {
+				return fmt.Errorf("given hue is not a valid number: %w", numErr)
+			}
+			actions = append(actions, func() error {
+				err := target.Hue(uint16(newHue))
+				if err != nil {
+					err = fmt.Errorf("failed to set hue: %w", err)
+				}
+				return err
+			})
+		case "saturation", "sat":
+			if len(args) == argHead-1 {
+				return errors.New("not enough arguments")
+			}
+			argHead++
+			newSat, numErr := strconv.Atoi(args[argHead])
+			if numErr != nil || newSat > 255 || newSat < 0 {
+				return fmt.Errorf("given saturation is not a valid number: %w", numErr)
+			}
+			actions = append(actions, func() error {
+				err := target.Sat(uint8(newSat))
+				if err != nil {
+					err = fmt.Errorf("failed to set saturation: %w", err)
+				}
+				return err
+			})
+		case "temperature", "temp":
+			if len(args) == argHead-1 {
+				return errors.New("not enough arguments")
+			}
+			argHead++
+			newTemp, numErr := strconv.Atoi(args[argHead])
+			if numErr != nil || newTemp > 500 || newTemp < 153 {
+				return fmt.Errorf("given temperature is not a valid number: %w", numErr)
+			}
+			actions = append(actions, func() error {
+				err := target.Ct(uint16(newTemp))
+				if err != nil {
+					err = fmt.Errorf("failed to set temperature: %w", err)
+				}
+				return err
 			})
 		case "alert":
 			actions = append(actions, func() error {

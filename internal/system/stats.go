@@ -2,6 +2,7 @@ package system
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/dhamith93/systats"
@@ -9,12 +10,13 @@ import (
 	"github.com/mazznoer/colorgrad"
 )
 
-func cpuLoad(ctx context.Context) (chan int, error) {
-	syStats := systats.New()
+var syStats = systats.New()
+
+func CPULoad(ctx context.Context) (chan int, error) {
 	loadChan := make(chan int, 10)
 	go func() {
 		for {
-			time.Sleep(2 * time.Second)
+			time.Sleep(500 * time.Millisecond)
 			cpu, err := syStats.GetCPU()
 			if err != nil {
 				return
@@ -30,6 +32,35 @@ func cpuLoad(ctx context.Context) (chan int, error) {
 	return loadChan, nil
 }
 
+func CoreLoads(ctx context.Context) (perCoreLoad chan uint16, coreCount int, err error) {
+	perCoreLoad = make(chan uint16, 1)
+	var c systats.CPU
+	c, err = syStats.GetCPU()
+	if err != nil {
+		return
+	}
+	coreCount = len(c.CoreAvg)
+	go func() {
+		for {
+			time.Sleep(500 * time.Millisecond)
+			c, err = syStats.GetCPU()
+			if err != nil {
+				return
+			}
+			select {
+			case <-ctx.Done():
+				return
+			default:
+				for _, core := range c.CoreAvg {
+					time.Sleep(50 * time.Millisecond)
+					perCoreLoad <- uint16(core)
+				}
+			}
+		}
+	}()
+	return
+}
+
 func CPULoadGradient(ctx context.Context, colors ...string) (chan colorful.Color, error) {
 	grad, err := colorgrad.NewGradient().
 		HtmlColors(colors...).
@@ -38,11 +69,11 @@ func CPULoadGradient(ctx context.Context, colors ...string) (chan colorful.Color
 	if err != nil {
 		return nil, err
 	}
-	load, err := cpuLoad(ctx)
+	load, err := CPULoad(ctx)
 	if err != nil {
 		return nil, err
 	}
-	gradChan := make(chan colorful.Color, 10)
+	gradChan := make(chan colorful.Color, 1)
 	go func() {
 		for {
 			select {
@@ -54,4 +85,26 @@ func CPULoadGradient(ctx context.Context, colors ...string) (chan colorful.Color
 		}
 	}()
 	return gradChan, nil
+}
+
+func CoreLoadHue(ctx context.Context) (chan uint16, error) {
+	cores, coreCount, err := CoreLoads(ctx)
+	if err != nil {
+		return nil, err
+	}
+	hueChan := make(chan uint16, 2)
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case core := <-cores:
+				fmt.Println(core)
+				rd := uint16(float64(core) / float64(coreCount) * 360)
+				hueChan <- rd
+			default:
+			}
+		}
+	}()
+	return hueChan, nil
 }
