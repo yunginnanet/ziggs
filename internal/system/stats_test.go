@@ -19,7 +19,7 @@ var grindSet = int64(0)
 var grindOnce = &sync.Once{}
 
 func grind(ctx context.Context) {
-	if atomic.LoadInt64(&grindSet) > 100 {
+	if atomic.LoadInt64(&grindSet) > 50 {
 		return
 	}
 	grindOnce.Do(

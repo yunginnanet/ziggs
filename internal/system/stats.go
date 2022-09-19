@@ -42,7 +42,7 @@ func CoreLoads(ctx context.Context) (perCoreLoad chan uint16, coreCount int, err
 	coreCount = len(c.CoreAvg)
 	go func() {
 		for {
-			time.Sleep(500 * time.Millisecond)
+			time.Sleep(250 * time.Millisecond)
 			c, err = syStats.GetCPU()
 			if err != nil {
 				return
@@ -52,7 +52,12 @@ func CoreLoads(ctx context.Context) (perCoreLoad chan uint16, coreCount int, err
 				return
 			default:
 				for _, core := range c.CoreAvg {
-					time.Sleep(50 * time.Millisecond)
+					if core == 0 {
+						continue
+					}
+					if core > 100 {
+						continue
+					}
 					perCoreLoad <- uint16(core)
 				}
 			}
@@ -101,7 +106,7 @@ func CoreLoadHue(ctx context.Context) (chan uint16, error) {
 			case core := <-cores:
 				fmt.Println(core)
 				rd := uint16(float64(core) / float64(coreCount) * 360)
-				hueChan <- rd
+				hueChan <- rd * 650
 			default:
 			}
 		}

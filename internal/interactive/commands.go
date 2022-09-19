@@ -11,6 +11,7 @@ import (
 
 	"github.com/amimof/huego"
 	"github.com/davecgh/go-spew/spew"
+	"github.com/lucasb-eyer/go-colorful"
 
 	"git.tcp.direct/kayos/ziggs/internal/common"
 	"git.tcp.direct/kayos/ziggs/internal/system"
@@ -22,6 +23,7 @@ var (
 	cpuCtx     context.Context
 	cpuCancel  context.CancelFunc
 	cpuLastCol string
+	cpuLastHue       = make(map[int]uint16)
 	brightness uint8 = 0
 )
 
@@ -32,6 +34,7 @@ var bridgeCMD = map[string]reactor{
 	"groups":    cmdGroups,
 	"delete":    cmdDelete,
 	"rename":    cmdRename,
+	"create":    cmdCreate,
 	"rules":     cmdRules,
 	"scan":      cmdScan,
 	"set":       cmdSet,
@@ -410,21 +413,42 @@ func cmdSet(bridge *ziggy.Bridge, args []string) error {
 				}
 				return alErr
 			})
-		case "cpu":
+		case "cpu", "cpu2":
 			switch cpuOn {
 			case false:
+				var load chan colorful.Color
+				var coreLoad chan uint16
+				var err error
 				cpuCtx, cpuCancel = context.WithCancel(context.Background())
-				load, err := system.CPULoadGradient(cpuCtx,
-					"cornflowerblue", "deepskyblue", "gold", "deeppink", "darkorange", "red")
-				if err != nil {
-					return err
+				if args[argHead] == "cpu" {
+					load, err = system.CPULoadGradient(cpuCtx,
+						"cornflowerblue", "deepskyblue", "gold", "deeppink", "darkorange", "red")
+					if err != nil {
+						return err
+					}
+				} else {
+					coreLoad, err = system.CoreLoadHue(cpuCtx)
+					if err != nil {
+						return err
+					}
 				}
 				log.Info().Msg("turning CPU load lights on for ")
 				go func(cpuTarget cmdTarget) {
+					var head = 0
 					cpuOn = true
 					defer func() {
 						cpuOn = false
 					}()
+					var lights []*huego.Light
+					for _, l := range cpuTarget.(*huego.Group).Lights {
+						lint, _ := strconv.Atoi(l)
+						lptr, err := bridge.GetLight(lint)
+						if err != nil {
+							log.Error().Err(err).Msg("failed to get light")
+							continue
+						}
+						lights = append(lights, lptr)
+					}
 					for {
 						select {
 						case <-cpuCtx.Done():
@@ -448,6 +472,24 @@ func cmdSet(bridge *ziggy.Bridge, args []string) error {
 							colErr := cpuTarget.Col(cHex)
 							if colErr != nil {
 								log.Error().Err(colErr).Msg("failed to set color")
+								time.Sleep(3 * time.Second)
+								continue
+							}
+						case hue := <-coreLoad:
+							if head > len(lights)-1 {
+								head = 0
+							}
+							time.Sleep(1 * time.Second)
+							if hue == cpuLastHue[head] {
+								continue
+							}
+							cpuLastHue[head] = hue
+							log.Trace().Msgf("CPU load hue: %v", hue)
+							target := lights[head]
+							hueErr := target.Hue(65535-hue)
+							head++
+							if hueErr != nil {
+								log.Error().Err(hueErr).Msg("failed to set hue")
 								time.Sleep(3 * time.Second)
 								continue
 							}
