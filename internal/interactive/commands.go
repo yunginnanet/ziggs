@@ -479,10 +479,10 @@ func cmdSet(bridge *ziggy.Bridge, args []string) error {
 							if head > len(lights)-1 {
 								head = 0
 							}
-							time.Sleep(1 * time.Second)
 							if hue == cpuLastHue[head] {
 								continue
 							}
+							time.Sleep(1 * time.Second)
 							cpuLastHue[head] = hue
 							log.Trace().Msgf("CPU load hue: %v", hue)
 							target := lights[head]
