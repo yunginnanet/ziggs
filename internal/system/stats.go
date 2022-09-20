@@ -2,7 +2,6 @@ package system
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/dhamith93/systats"
@@ -13,7 +12,7 @@ import (
 var syStats = systats.New()
 
 func CPULoad(ctx context.Context) (chan int, error) {
-	loadChan := make(chan int, 10)
+	loadChan := make(chan int)
 	go func() {
 		for {
 			time.Sleep(500 * time.Millisecond)
@@ -24,8 +23,10 @@ func CPULoad(ctx context.Context) (chan int, error) {
 			select {
 			case <-ctx.Done():
 				return
+			case loadChan <- cpu.LoadAvg:
+				//
 			default:
-				loadChan <- cpu.LoadAvg
+				//
 			}
 		}
 	}()
@@ -33,7 +34,7 @@ func CPULoad(ctx context.Context) (chan int, error) {
 }
 
 func CoreLoads(ctx context.Context) (perCoreLoad chan uint16, coreCount int, err error) {
-	perCoreLoad = make(chan uint16, 1)
+	perCoreLoad = make(chan uint16)
 	var c systats.CPU
 	c, err = syStats.GetCPU()
 	if err != nil {
@@ -42,7 +43,6 @@ func CoreLoads(ctx context.Context) (perCoreLoad chan uint16, coreCount int, err
 	coreCount = len(c.CoreAvg)
 	go func() {
 		for {
-			time.Sleep(250 * time.Millisecond)
 			c, err = syStats.GetCPU()
 			if err != nil {
 				return
@@ -59,6 +59,7 @@ func CoreLoads(ctx context.Context) (perCoreLoad chan uint16, coreCount int, err
 						continue
 					}
 					perCoreLoad <- uint16(core)
+					time.Sleep(250 * time.Millisecond)
 				}
 			}
 		}
@@ -78,7 +79,7 @@ func CPULoadGradient(ctx context.Context, colors ...string) (chan colorful.Color
 	if err != nil {
 		return nil, err
 	}
-	gradChan := make(chan colorful.Color, 1)
+	gradChan := make(chan colorful.Color, 10)
 	go func() {
 		for {
 			select {
@@ -97,17 +98,17 @@ func CoreLoadHue(ctx context.Context) (chan uint16, error) {
 	if err != nil {
 		return nil, err
 	}
-	hueChan := make(chan uint16, 2)
+	hueChan := make(chan uint16)
 	go func() {
 		for {
 			select {
 			case <-ctx.Done():
 				return
 			case core := <-cores:
-				fmt.Println(core)
 				rd := uint16(float64(core) / float64(coreCount) * 360)
 				hueChan <- rd * 650
 			default:
+				time.Sleep(10 * time.Millisecond)
 			}
 		}
 	}()

@@ -455,7 +455,7 @@ func cmdSet(bridge *ziggy.Bridge, args []string) error {
 							cpuOn = false
 							return
 						case clr := <-load:
-							time.Sleep(2 * time.Second)
+							time.Sleep(750 * time.Millisecond)
 							if clr.Hex() == cpuLastCol {
 								continue
 							}
@@ -482,17 +482,21 @@ func cmdSet(bridge *ziggy.Bridge, args []string) error {
 							if hue == cpuLastHue[head] {
 								continue
 							}
-							time.Sleep(1 * time.Second)
+							time.Sleep(750 * time.Millisecond)
 							cpuLastHue[head] = hue
-							log.Trace().Msgf("CPU load hue: %v", hue)
+							// log.Trace().Msgf("CPU load hue: %v", hue)
 							target := lights[head]
-							hueErr := target.Hue(65535-hue)
-							head++
+							newh := 65000 - hue
+							if newh < 1 {
+								newh = 1
+							}
+							hueErr := target.Hue(newh)
 							if hueErr != nil {
 								log.Error().Err(hueErr).Msg("failed to set hue")
 								time.Sleep(3 * time.Second)
 								continue
 							}
+							head++
 						}
 					}
 				}(target)
