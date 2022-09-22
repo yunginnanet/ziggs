@@ -22,7 +22,7 @@ func GetGroupMap() (map[string]*huego.Group, error) {
 		for _, g := range gs {
 			grp, gerr := br.GetGroup(g.ID)
 			if gerr != nil {
-				log.Warn().Msgf("[%s] %w", g.Name, gerr)
+				log.Warn().Msgf("[%s] %v", g.Name, gerr)
 				continue
 			}
 			var count = 1

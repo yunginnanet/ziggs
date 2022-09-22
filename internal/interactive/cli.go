@@ -85,24 +85,6 @@ func (s *Selection) String() string {
 
 var sel = &Selection{}
 
-func InteractiveAuth() string {
-	passPrompt := tui.Prompt{
-		Label:    "API Key (AKA user)",
-		Validate: validate,
-		Mask:     '',
-	}
-
-	for {
-		key, perr := passPrompt.Run()
-
-		if perr != nil {
-			fmt.Println(tui.IconBad + perr.Error())
-			continue
-		}
-		return key
-	}
-}
-
 // Interpret is where we will actuall define our commands
 func executor(cmd string) {
 	cmd = strings.TrimSpace(cmd)
@@ -250,8 +232,6 @@ loop:
 	return nil
 }
 
-var selectedBridge = ""
-
 const bulb = ``
 
 func getHist() []string {
@@ -280,7 +260,7 @@ func StartCLI() {
 		cli.OptionLivePrefix(
 			func() (prefix string, useLivePrefix bool) {
 				if len(ziggy.Lucifer.Bridges) == 1 {
-					for brid, _ := range ziggy.Lucifer.Bridges {
+					for brid := range ziggy.Lucifer.Bridges {
 						sel.Bridge = brid
 					}
 				}

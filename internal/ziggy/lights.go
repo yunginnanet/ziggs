@@ -44,21 +44,25 @@ var Lucifer = Meta{
 type Bridge struct {
 	config    *config.KnownBridge
 	Info      *huego.Config
+	log       *zerolog.Logger
+	debuglog  *zerolog.Logger
 	HueLights []*huego.Light
 	*huego.Bridge
 	*sync.RWMutex
 }
 
+func (c *Bridge) Run(e *zerolog.Event, level zerolog.Level, msg string) {
+	if level == zerolog.DebugLevel || level == zerolog.TraceLevel {
+		e.Str("caller", c.ID)
+	}
+}
+
 func (c *Bridge) Log() *zerolog.Logger {
-	l := log.With().
-		Str("caller", c.Info.BridgeID).
-		Str("ip", c.Info.IPAddress).
-		Uint8("zb", c.Info.ZigbeeChannel).Logger()
-	return &l
+	return c.log
 }
 
 type HueLight struct {
-	l          huego.Light
+	l          *huego.Light
 	controller *Bridge
 }
 
@@ -103,11 +107,19 @@ func newController(cridge *config.KnownBridge) (*Bridge, error) {
 		return nil, err
 	}
 
+	l := log.With().
+		//		Uint8("zigbee_channel", c.Info.ZigbeeChannel).
+		//		Str("ip", c.Info.IPAddress).
+		Logger().Hook(c)
+	c.log = &l
 	return c, nil
 }
 
 func GetControllers(bridges []config.KnownBridge) (br []*Bridge) {
 	for _, lightConfig := range bridges {
+		if lightConfig.Hostname == "" {
+			continue
+		}
 		log.Debug().Str("caller", lightConfig.Hostname).Str("proxy", lightConfig.Proxy).Msg("attempting connection")
 		c, err := newController(&lightConfig)
 		if err != nil {
@@ -256,14 +268,21 @@ func (c *Bridge) getLights() error {
 	if err != nil {
 		return err
 	}
-	c.Log().Info().Msgf("Found %d lights", len(l))
+	if l == nil {
+		return fmt.Errorf("no lights found")
+	}
+	log.Info().Msgf("Found %d lights", len(l))
 	for _, light := range l {
+		lightPtr, err := c.GetLight(light.ID)
+		if err != nil {
+			return err
+		}
 		newlight := &HueLight{
-			l:          light,
+			l:          lightPtr,
 			controller: c,
 		}
-		log.Trace().Interface("new light", newlight.l).Msg("+")
-		c.HueLights = append(c.HueLights, &newlight.l)
+		log.Debug().Interface("new light", newlight.l).Msg("+")
+		c.HueLights = append(c.HueLights, newlight.l)
 		Lucifer.Lock()
 		Lucifer.Lights[light.Name] = newlight
 		Lucifer.Unlock()
@@ -301,7 +320,7 @@ func promptForUser(cnt *Bridge) bool {
 		cnt.User = newuser
 	case 1:
 		userEntry := tui.Prompt{
-			Label: "Username:",
+			Label: "Username",
 			Validate: func(s string) error {
 				if len(s) < 40 {
 					return errors.New("username must be at least 40 characters")
@@ -384,7 +403,7 @@ func Setup() (known []*Bridge, err error) {
 		}
 		bridge.Log().Trace().Interface("supported", caps).Msg("capabilities")
 		Lucifer.Lock()
-		Lucifer.Bridges[bridge.Info.BridgeID] = bridge
+		Lucifer.Bridges[bridge.Info.IPAddress] = bridge
 		Lucifer.Unlock()
 	}
 	return

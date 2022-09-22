@@ -52,10 +52,15 @@ addrIter:
 	return candidates
 }
 
-func enumerateBridge(a net.Addr) interface{} {
+func enumerateBridge(a net.Addr, ctx context.Context) interface{} {
 	var err error
 	if _, err = net.DialTimeout("tcp", a.String()+":80", 2*time.Second); err != nil {
-		log.Debug().Err(err).Msgf("failed to dial %s", a.String())
+		select {
+		case <-ctx.Done():
+			//
+		default:
+			log.Debug().Err(err).Msgf("failed to dial %s", a.String())
+		}
 		return nil
 	}
 	var resp *http.Response
@@ -85,15 +90,21 @@ func enumerateBridge(a net.Addr) interface{} {
 }
 
 func scanChoicePrompt(interfaces []net.Interface) net.Interface {
+	var ifaceMap = make(map[string]int)
+	var ifaces []string
+	for index, iface := range interfaces {
+		ifaceMap[iface.Name] = index
+		ifaces = append(ifaces, iface.Name)
+	}
 	confirmPrompt := tui.Select{
 		Label:     "Choose a network interface to scan for bridges:",
-		Items:     interfaces,
+		Items:     ifaces,
 		CursorPos: 0,
 		IsVimMode: false,
 		Pointer:   common.ZiggsPointer,
 	}
-	choice, _, _ := confirmPrompt.Run()
-	return interfaces[choice]
+	_, choice, _ := confirmPrompt.Run()
+	return interfaces[ifaceMap[choice]]
 }
 
 func checkAddrs(ctx context.Context, addrs []net.Addr, working *int32, resChan chan interface{}) {
@@ -120,7 +131,7 @@ func checkAddrs(ctx context.Context, addrs []net.Addr, working *int32, resChan c
 			log.Trace().Msgf("checking %s", ipa.String())
 			atomic.AddInt32(working, 1)
 			go func(ip netaddr.IP) {
-				resChan <- enumerateBridge(ip.IPAddr())
+				resChan <- enumerateBridge(ip.IPAddr(), ctx)
 				time.Sleep(100 * time.Millisecond)
 				atomic.AddInt32(working, -1)
 			}(ipa)
@@ -163,6 +174,9 @@ resultLoop:
 				cancel()
 				atomic.StoreInt32(&working, 0)
 			}
+		case <-ctx.Done():
+			cancel()
+			break resultLoop
 		default:
 			if atomic.LoadInt32(&working) <= 0 {
 				cancel()
@@ -204,8 +218,6 @@ func promptForDiscovery() error {
 		cs = append(cs, brd)
 	}
 
-	Lucifer.Lock()
-	defer Lucifer.Unlock()
 	for _, c := range cs {
 		cnt := &Bridge{
 			Bridge:  c,
@@ -218,7 +230,7 @@ func promptForDiscovery() error {
 			}
 		}
 		Lucifer.Lock()
-		Lucifer.Bridges[cnt.Info.BridgeID] = cnt
+		Lucifer.Bridges[cnt.Info.IPAddress] = cnt
 		Lucifer.Unlock()
 	}
 	return nil

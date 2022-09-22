@@ -96,7 +96,7 @@ func setDefaults() {
 		"use_date_filename": true,
 	}
 	Opt["bridges"] = map[string]interface{}{
-		"hostname": "192.168.69.100",
+		"hostname": "",
 		"username": "",
 		"proxy":    "",
 	}

@@ -22,15 +22,17 @@ func grind(ctx context.Context) {
 	if atomic.LoadInt64(&grindSet) > 50 {
 		return
 	}
+	var cancel context.CancelFunc
 	grindOnce.Do(
 		func() {
-			ctx, _ = context.WithDeadline(ctx, time.Now().Add(10*time.Second))
+			ctx, cancel = context.WithDeadline(ctx, time.Now().Add(10*time.Second))
 		})
 	atomic.AddInt64(&grindSet, 1)
 	time.Sleep(time.Duration(5000-(entropy.RNG(int(atomic.LoadInt64(&grindSet))*7500))) * time.Millisecond)
 	for {
 		select {
 		case <-ctx.Done():
+			cancel()
 			return
 		default:
 			go grind(ctx)
