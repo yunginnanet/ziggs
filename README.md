@@ -1,6 +1,6 @@
 # Ziggs
 
-  ![Ziggs Demo](https://tcp.ac/i/UTlJi.gif)
+  ![Ziggs Demo](https://tcp.ac/i/wW3Fh.gif)
 
 There are zigbees in my head.
 
@@ -34,4 +34,3 @@ With that being said, it should work fairly well to provide a command line inter
     - config will automatically save when a bridge connection is established
 ---
 
-I use this every day to ~~inflict pain upon myself~~ control the lights inside and outside of my house.
