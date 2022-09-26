@@ -10,10 +10,10 @@ import (
 	"github.com/manifoldco/promptui"
 	"github.com/rs/zerolog"
 
+	"git.tcp.direct/kayos/ziggs/internal/cli"
 	"git.tcp.direct/kayos/ziggs/internal/common"
 	config2 "git.tcp.direct/kayos/ziggs/internal/config"
 	"git.tcp.direct/kayos/ziggs/internal/data"
-	"git.tcp.direct/kayos/ziggs/internal/interactive"
 	"git.tcp.direct/kayos/ziggs/internal/ziggy"
 )
 
@@ -39,7 +39,10 @@ func TurnAll(Known []*ziggy.Bridge, mode ziggy.ToggleMode) {
 					Str("type", l.ProductName).
 					Bool("on", l.IsOn()).Msg(l.ModelID)
 				ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(5*time.Second))
-				ziggy.Assert(ctx, l, mode)
+				err := ziggy.Assert(ctx, l, mode)
+				if err != nil {
+					log.Error().Err(err).Msg("failed to assert state")
+				}
 				defer cancel()
 			}(l)
 		}
@@ -144,13 +147,13 @@ func main() {
 				}
 			}
 		case "shell":
-			interactive.StartCLI()
+			cli.StartCLI()
 		case "newsensor":
 			getNewSensors(Known[0])
 		case "sensors":
 			sens, err := Known[0].GetSensors()
 			if err != nil {
-				log.Fatal().Err(err).Msg("")
+				log.Fatal().Err(err).Msg("-")
 			}
 			var sensptr []*huego.Sensor
 			for _, s := range sens {

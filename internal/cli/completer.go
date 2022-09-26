@@ -1,15 +1,10 @@
-package interactive
+package cli
 
 import (
 	"strings"
 
 	cli "git.tcp.direct/Mirrors/go-prompt"
-	"github.com/amimof/huego"
-
-	"git.tcp.direct/kayos/ziggs/internal/ziggy"
 )
-
-type reactor func(bridge *ziggy.Bridge, args []string) error
 
 const (
 	grn = "\033[32m"
@@ -20,6 +15,7 @@ const (
 
 type completion struct {
 	cli.Suggest
+	inner    *ziggsCommand
 	requires map[int][]string
 	root     bool
 }
@@ -66,10 +62,7 @@ func (c completion) qualifies(line string) bool {
 			count++
 		}
 	}
-	if count >= len(c.requires) {
-		return true
-	}
-	return false
+	return count >= len(c.requires)
 }
 
 var suggestions map[int][]completion
@@ -77,19 +70,18 @@ var suggestions map[int][]completion
 func init() {
 	suggestions = make(map[int][]completion)
 	suggestions[0] = []completion{
-		{Suggest: cli.Suggest{Text: "lights", Description: "print all known lights"}},
-		{Suggest: cli.Suggest{Text: "groups", Description: "print all known groups"}},
-		{Suggest: cli.Suggest{Text: "rules", Description: "print all known rules"}},
-		{Suggest: cli.Suggest{Text: "scenes", Description: "print all known scenes"}},
-		{Suggest: cli.Suggest{Text: "schedules", Description: "print all known schedules"}},
-		{Suggest: cli.Suggest{Text: "sensors", Description: "print all known sensors"}},
+		{Suggest: cli.Suggest{Text: "lights", Description: "print all known lights"}, inner: CLICommands["lights"], root: true},
+		{Suggest: cli.Suggest{Text: "groups", Description: "print all known groups"}, inner: CLICommands["groups"], root: true},
+		{Suggest: cli.Suggest{Text: "rules", Description: "print all known rules"}, inner: CLICommands["rules"], root: true},
+		{Suggest: cli.Suggest{Text: "scenes", Description: "print all known scenes"}, inner: CLICommands["scenes"], root: true},
+		{Suggest: cli.Suggest{Text: "schedules", Description: "print all known schedules"}, inner: CLICommands["schedules"], root: true},
+		{Suggest: cli.Suggest{Text: "sensors", Description: "print all known sensors"}, inner: CLICommands["sensors"], root: true},
+		{Suggest: cli.Suggest{Text: "set", Description: "set state of target"}, inner: CLICommands["set"], root: true},
+		{Suggest: cli.Suggest{Text: "create", Description: "create object"}, inner: CLICommands["create"], root: true},
+		{Suggest: cli.Suggest{Text: "delete", Description: "delete object"}, inner: CLICommands["delete"], root: true},
 		{Suggest: cli.Suggest{Text: "clear", Description: "clear screen"}},
 		{Suggest: cli.Suggest{Text: "scan", Description: "scan for bridges"}},
 		{Suggest: cli.Suggest{Text: "exit", Description: "exit ziggs"}},
-		// {Suggest: cli.Suggest{Text: "quit", Description: "exit ziggs"}},
-		{Suggest: cli.Suggest{Text: "set", Description: "set state of target"}},
-		{Suggest: cli.Suggest{Text: "delete", Description: "delete object"}},
-		{Suggest: cli.Suggest{Text: "create", Description: "create object"}},
 		{Suggest: cli.Suggest{Text: "use", Description: "select bridge to perform actions on"}},
 	}
 	for _, sug := range suggestions[0] {
@@ -114,62 +106,6 @@ func init() {
 		sug.root = false
 	}
 	suggestions[1] = append(suggestions[1], delCompletion...)
-}
-
-func processGroups(grps map[string]*huego.Group) {
-	for grp, g := range grps {
-		suffix := ""
-		if g.Type != "" {
-			suffix = " (" + g.Type + ")"
-		}
-		suggestions[2] = append(suggestions[2],
-			completion{
-				Suggest: cli.Suggest{
-					Text:        grp,
-					Description: "Group" + suffix,
-				},
-				requires: map[int][]string{
-					0: {"set", "s", "delete", "del"},
-					1: {"group", "g"},
-				},
-				root: false,
-			})
-	}
-}
-
-func processLights() {
-	for lt, l := range ziggy.GetLightMap() {
-		suffix := ""
-		if l.Type != "" {
-			suffix = " (" + l.Type + ")"
-		}
-		suggestions[2] = append(suggestions[2],
-			completion{
-				Suggest: cli.Suggest{
-					Text:        lt,
-					Description: "Light" + suffix,
-				},
-				requires: map[int][]string{
-					0: {"set", "s", "delete", "del"},
-					1: {"light", "l"},
-				},
-				root: false,
-			})
-	}
-}
-
-func processBridges() {
-	for brd, b := range ziggy.Lucifer.Bridges {
-		suggestions[1] = append(suggestions[1],
-			completion{
-				Suggest: cli.Suggest{
-					Text:        brd,
-					Description: "Bridge: " + b.Host,
-				},
-				requires: map[int][]string{0: {"use", "u"}},
-				root:     false,
-			})
-	}
 }
 
 func completer(in cli.Document) []cli.Suggest {

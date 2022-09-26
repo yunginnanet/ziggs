@@ -1,11 +1,9 @@
-package interactive
+package cli
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"strings"
-	"sync"
 	"time"
 
 	cli "git.tcp.direct/Mirrors/go-prompt"
@@ -25,67 +23,7 @@ var (
 	extraDebug = false
 )
 
-func validate(input string) error {
-	if len(strings.TrimSpace(input)) < 1 {
-		return errors.New("no input detected")
-	}
-	return nil
-}
-
-type Selection struct {
-	Bridge string
-	Action string
-	Target struct {
-		Type string
-		Name string
-	}
-}
-
-type pool struct {
-	p *sync.Pool
-}
-
-var stringers = pool{p: &sync.Pool{
-	New: func() interface{} {
-		return &strings.Builder{}
-	}}}
-
-func (p *pool) Get() *strings.Builder {
-	return p.p.Get().(*strings.Builder)
-}
-
-func (p *pool) Put(sb *strings.Builder) {
-	sb.Reset()
-	p.p.Put(sb)
-}
-
-func (s *Selection) String() string {
-	if s.Bridge == "" && s.Action == "" {
-		return "~"
-	}
-	builder := stringers.Get()
-	builder.WriteString(s.Bridge)
-	if s.Action != "" {
-		builder.WriteString("/")
-		builder.WriteString(s.Action)
-	}
-	if s.Target.Type != "" {
-		builder.WriteString("/")
-		builder.WriteString(s.Target.Type)
-		builder.WriteString("s")
-	}
-	if s.Target.Name != "" {
-		builder.WriteString("/")
-		builder.WriteString(s.Target.Name)
-	}
-	res := builder.String()
-	stringers.Put(builder)
-	return res
-}
-
-var sel = &Selection{}
-
-// Interpret is where we will actuall define our commands
+// Interpret is where we will actuall define our CLICommands
 func executor(cmd string) {
 	cmd = strings.TrimSpace(cmd)
 	var args = strings.Fields(cmd)
@@ -139,7 +77,7 @@ func executor(cmd string) {
 		if len(args) == 0 {
 			return
 		}
-		bcmd, ok := bridgeCMD[args[0]]
+		bcmd, ok := CLICommands[args[0]]
 		if !ok {
 			return
 		}
@@ -156,14 +94,14 @@ func executor(cmd string) {
 			}
 			for _, br := range ziggy.Lucifer.Bridges {
 				go func(brj *ziggy.Bridge) {
-					err := bcmd(brj, args[1:])
+					err := bcmd.reactor(brj, args[1:])
 					if err != nil {
 						log.Error().Err(err).Msg("bridge command failed")
 					}
 				}(br)
 			}
 		} else {
-			err := bcmd(br, args[1:])
+			err := bcmd.reactor(br, args[1:])
 			if err != nil {
 				log.Error().Err(err).Msg("error executing command")
 			}
@@ -172,30 +110,15 @@ func executor(cmd string) {
 }
 
 func getHelp(target string) {
-	fmt.Printf("pRaNkeD! (help not available just yet.)\n")
-	/*
-		var lines []string
-
-		lines = append(lines, "help: "+target)
-
-		switch target {
-
-		case "meta":
-			var list string
-			for _, cmd := range cmds {
-				list = list + cmd + ", "
-			}
-
-			fmt.Println("Enabled commands: ")
-			list = strings.TrimSuffix(list, ", ")
-			fmt.Println(list)
-			fmt.Println()
-
-		default:
-			log.Error().Msg("Help entry not found!")
-			fmt.Println()
+	/*	if target == "" {
+	 */
+	for _, sug := range suggestions {
+		for _, su := range sug {
+			println(su.Text + "(" + strings.Join(su.inner.aliases, ", ") + ")\t" + su.Description)
 		}
-	*/
+	}
+	return
+	// }
 }
 
 func cmdScan(br *ziggy.Bridge, args []string) error {
