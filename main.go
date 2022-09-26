@@ -125,6 +125,10 @@ func main() {
 	data.Start()
 	defer data.Close()
 
+	if len(os.Args) < 2 {
+		cli.StartCLI()
+	}
+
 	for _, arg := range os.Args {
 		switch arg {
 		case "discover":

@@ -23,7 +23,7 @@ var (
 	extraDebug = false
 )
 
-// Interpret is where we will actuall define our CLICommands
+// Interpret is where we will actuall define our Commands
 func executor(cmd string) {
 	cmd = strings.TrimSpace(cmd)
 	var args = strings.Fields(cmd)
@@ -60,7 +60,7 @@ func executor(cmd string) {
 		}
 	case "help":
 		if len(args) < 2 {
-			getHelp("meta")
+			getHelp("")
 			return
 		}
 		getHelp(args[len(args)-1])
@@ -77,7 +77,7 @@ func executor(cmd string) {
 		if len(args) == 0 {
 			return
 		}
-		bcmd, ok := CLICommands[args[0]]
+		bcmd, ok := Commands[args[0]]
 		if !ok {
 			return
 		}
@@ -107,18 +107,6 @@ func executor(cmd string) {
 			}
 		}
 	}
-}
-
-func getHelp(target string) {
-	/*	if target == "" {
-	 */
-	for _, sug := range suggestions {
-		for _, su := range sug {
-			println(su.Text + "(" + strings.Join(su.inner.aliases, ", ") + ")\t" + su.Description)
-		}
-	}
-	return
-	// }
 }
 
 func cmdScan(br *ziggy.Bridge, args []string) error {

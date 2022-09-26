@@ -22,22 +22,23 @@ var (
 )
 
 type ziggsCommand struct {
-	reactor reactor
-	aliases []string
-	isAlias bool
+	reactor     reactor
+	description string
+	aliases     []string
+	isAlias     bool
 }
 
 type reactor func(bridge *ziggy.Bridge, args []string) error
 
-func newZiggsCommand(
-	react reactor,
-	aliases ...string) *ziggsCommand {
+func newZiggsCommand(react reactor, desc string, aliases ...string) *ziggsCommand {
 	ret := &ziggsCommand{
-		reactor: react,
-		isAlias: false,
+		reactor:     react,
+		aliases:     aliases,
+		isAlias:     false,
+		description: desc,
 	}
 	for _, alias := range aliases {
-		CLICommands[alias] = &ziggsCommand{
+		Commands[alias] = &ziggsCommand{
 			reactor: react,
 			isAlias: true,
 		}
@@ -45,21 +46,7 @@ func newZiggsCommand(
 	return ret
 }
 
-var CLICommands = make(map[string]*ziggsCommand)
-
-func init() {
-	CLICommands["ls"] = newZiggsCommand(cmdList)
-	CLICommands["schedules"] = newZiggsCommand(cmdSchedules, "lssched", "crontab")
-	CLICommands["rules"] = newZiggsCommand(cmdRules, "lsrule")
-	CLICommands["sensors"] = newZiggsCommand(cmdSensors, "lssens")
-	CLICommands["scenes"] = newZiggsCommand(cmdScenes, "lsscene")
-	CLICommands["lights"] = newZiggsCommand(cmdLights, "lslight")
-	CLICommands["groups"] = newZiggsCommand(cmdGroups, "lsgrp")
-	CLICommands["delete"] = newZiggsCommand(cmdDelete, "del", "remove")
-	CLICommands["scan"] = newZiggsCommand(cmdScan, "search", "find")
-	CLICommands["rename"] = newZiggsCommand(cmdRename, "mv")
-	CLICommands["set"] = newZiggsCommand(cmdSet, "update")
-}
+var Commands = make(map[string]*ziggsCommand)
 
 func cmdList(br *ziggy.Bridge, args []string) error {
 	var runs = []reactor{cmdLights, cmdGroups, cmdScenes, cmdSensors}
@@ -91,7 +78,9 @@ func cmdScenes(br *ziggy.Bridge, args []string) error {
 		return err
 	}
 	for _, scene := range scenes {
-		log.Info().Str("caller", scene.Name).Msgf("%v", spew.Sprint(scene))
+		log.Info().Str("caller", strings.Split(br.Host, "://")[1]).
+			Str("ID", scene.ID).Msgf("Scene: %s", scene.Name)
+		log.Trace().Msgf("%v", spew.Sprint(scene))
 	}
 	return nil
 }
@@ -99,8 +88,9 @@ func cmdScenes(br *ziggy.Bridge, args []string) error {
 func cmdLights(br *ziggy.Bridge, args []string) error {
 	for name, l := range ziggy.GetLightMap() {
 		log.Info().
-			Int("ID", l.ID).Str("type", l.ProductName).
-			Str("model", l.ModelID).Bool("on", l.IsOn()).Msgf("[+] %s", name)
+			Str("caller", strings.Split(br.Host, "://")[1]).Int("ID", l.ID).Str("type", l.ProductName).
+			Str("model", l.ModelID).Bool("on", l.IsOn()).Msgf("Light: %s", name)
+		log.Trace().Msgf("%v", spew.Sprint(l))
 	}
 	return nil
 }
@@ -114,7 +104,9 @@ func cmdRules(br *ziggy.Bridge, args []string) error {
 		return errors.New("no rules found")
 	}
 	for _, r := range rules {
-		log.Info().Str("caller", r.Name).Int("ID", r.ID).Msgf("%v", spew.Sprint(r))
+		log.Info().Str("caller", strings.Split(br.Host, "://")[1]).Int("ID", r.ID).
+			Str("status", r.Status).Msgf("Rule: %s", r.Name)
+		log.Trace().Msgf("%v", spew.Sprint(r))
 	}
 	return nil
 }
@@ -128,7 +120,9 @@ func cmdSchedules(br *ziggy.Bridge, args []string) error {
 		return errors.New("no schedules found")
 	}
 	for _, s := range schedules {
-		log.Info().Str("caller", s.Name).Int("ID", s.ID).Msgf("%v", spew.Sprint(s))
+		log.Info().Str("caller", strings.Split(br.Host, "://")[1]).Int("ID", s.ID).
+			Str("desc", s.Description).Msgf("Schedule: %s", s.Name)
+		log.Trace().Msgf("%v", spew.Sprint(s))
 	}
 	return nil
 }
@@ -142,7 +136,9 @@ func cmdSensors(br *ziggy.Bridge, args []string) error {
 		return errors.New("no sensors found")
 	}
 	for _, s := range sensors {
-		log.Info().Str("caller", s.Name).Int("ID", s.ID).Msgf("%v", spew.Sprint(s))
+		log.Info().Str("caller", strings.Split(br.Host, "://")[1]).Int("ID", s.ID).
+			Str("type", s.Type).Msgf("Sensor: %s", s.Name)
+		log.Trace().Msgf("%v", spew.Sprint(s))
 	}
 	return nil
 }
@@ -156,8 +152,10 @@ func cmdGroups(br *ziggy.Bridge, args []string) error {
 		return errors.New("no groups found")
 	}
 	for n, g := range groupmap {
-		log.Info().Str("caller", g.Name).Str("mapname", n).Str("type", g.Type).Int("ID", g.ID).
-			Str("class", g.Class).Bool("on", g.IsOn()).Msgf("%v", g.GroupState)
+		log.Info().Str("caller", strings.Split(br.Host, "://")[1]).
+			Str("mapname", n).Str("type", g.Type).Int("ID", g.ID).
+			Str("class", g.Class).Bool("on", g.IsOn()).Msgf("Group: %s", g.Name)
+		log.Trace().Msgf("%v", spew.Sprint(g))
 	}
 	return nil
 }

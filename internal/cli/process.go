@@ -14,7 +14,7 @@ func processGroups(grps map[string]*huego.Group) {
 			suffix = " (" + g.Type + ")"
 		}
 		suggestions[2] = append(suggestions[2],
-			completion{
+			&completion{
 				Suggest: cli.Suggest{
 					Text:        grp,
 					Description: "Group" + suffix,
@@ -35,7 +35,7 @@ func processLights() {
 			suffix = " (" + l.Type + ")"
 		}
 		suggestions[2] = append(suggestions[2],
-			completion{
+			&completion{
 				Suggest: cli.Suggest{
 					Text:        lt,
 					Description: "Light" + suffix,
@@ -52,7 +52,7 @@ func processLights() {
 func processBridges() {
 	for brd, b := range ziggy.Lucifer.Bridges {
 		suggestions[1] = append(suggestions[1],
-			completion{
+			&completion{
 				Suggest: cli.Suggest{
 					Text:        brd,
 					Description: "Bridge: " + b.Host,

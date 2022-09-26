@@ -9,7 +9,6 @@ import (
 const (
 	grn = "\033[32m"
 	red = "\033[31m"
-	ylw = "\033[33m"
 	rst = "\033[0m"
 )
 
@@ -17,6 +16,7 @@ type completion struct {
 	cli.Suggest
 	inner    *ziggsCommand
 	requires map[int][]string
+	isAlias  bool
 	root     bool
 }
 
@@ -65,30 +65,61 @@ func (c completion) qualifies(line string) bool {
 	return count >= len(c.requires)
 }
 
-var suggestions map[int][]completion
+var suggestions map[int][]*completion
 
 func init() {
-	suggestions = make(map[int][]completion)
-	suggestions[0] = []completion{
-		{Suggest: cli.Suggest{Text: "lights", Description: "print all known lights"}, inner: CLICommands["lights"], root: true},
-		{Suggest: cli.Suggest{Text: "groups", Description: "print all known groups"}, inner: CLICommands["groups"], root: true},
-		{Suggest: cli.Suggest{Text: "rules", Description: "print all known rules"}, inner: CLICommands["rules"], root: true},
-		{Suggest: cli.Suggest{Text: "scenes", Description: "print all known scenes"}, inner: CLICommands["scenes"], root: true},
-		{Suggest: cli.Suggest{Text: "schedules", Description: "print all known schedules"}, inner: CLICommands["schedules"], root: true},
-		{Suggest: cli.Suggest{Text: "sensors", Description: "print all known sensors"}, inner: CLICommands["sensors"], root: true},
-		{Suggest: cli.Suggest{Text: "set", Description: "set state of target"}, inner: CLICommands["set"], root: true},
-		{Suggest: cli.Suggest{Text: "create", Description: "create object"}, inner: CLICommands["create"], root: true},
-		{Suggest: cli.Suggest{Text: "delete", Description: "delete object"}, inner: CLICommands["delete"], root: true},
-		{Suggest: cli.Suggest{Text: "clear", Description: "clear screen"}},
-		{Suggest: cli.Suggest{Text: "scan", Description: "scan for bridges"}},
-		{Suggest: cli.Suggest{Text: "exit", Description: "exit ziggs"}},
+	Commands["ls"] = newZiggsCommand(cmdList, "list all lights, groups, scenes, rules, and schedules")
+	Commands["schedules"] = newZiggsCommand(cmdSchedules, "list schedules", "lssched", "crontab")
+	Commands["rules"] = newZiggsCommand(cmdRules, "list rules", "lsrule")
+	Commands["sensors"] = newZiggsCommand(cmdSensors, "list sensors", "lssens")
+	Commands["scenes"] = newZiggsCommand(cmdScenes, "list scenes", "lsscene")
+	Commands["lights"] = newZiggsCommand(cmdLights, "list lights", "lslight")
+	Commands["groups"] = newZiggsCommand(cmdGroups, "list groups", "lsgrp")
+	Commands["create"] = newZiggsCommand(cmdCreate, "create a new object in bridge", "new", "mk")
+	Commands["delete"] = newZiggsCommand(cmdDelete, "delete objects from bridges", "del", "remove")
+	Commands["scan"] = newZiggsCommand(cmdScan, "scan for bridges/lights/sensors", "search", "find")
+	Commands["rename"] = newZiggsCommand(cmdRename, "rename object in bridge", "mv")
+	Commands["set"] = newZiggsCommand(cmdSet, "update object properties in bridge", "update")
+	initCompletion()
+}
+
+func initCompletion() {
+	suggestions = make(map[int][]*completion)
+	suggestions[0] = []*completion{
+		{Suggest: cli.Suggest{Text: "lights"}, inner: Commands["lights"]},
+		{Suggest: cli.Suggest{Text: "groups"}, inner: Commands["groups"]},
+		{Suggest: cli.Suggest{Text: "rules"}, inner: Commands["rules"]},
+		{Suggest: cli.Suggest{Text: "scenes"}, inner: Commands["scenes"]},
+		{Suggest: cli.Suggest{Text: "schedules"}, inner: Commands["schedules"]},
+		{Suggest: cli.Suggest{Text: "sensors"}, inner: Commands["sensors"]},
+		{Suggest: cli.Suggest{Text: "set"}, inner: Commands["set"]},
+		{Suggest: cli.Suggest{Text: "create"}, inner: Commands["create"]},
+		{Suggest: cli.Suggest{Text: "delete"}, inner: Commands["delete"]},
+		{Suggest: cli.Suggest{Text: "scan"}, inner: Commands["scan"]},
 		{Suggest: cli.Suggest{Text: "use", Description: "select bridge to perform actions on"}},
+		{Suggest: cli.Suggest{Text: "clear", Description: "clear screen"}},
+		{Suggest: cli.Suggest{Text: "exit", Description: "exit ziggs"}},
 	}
+
 	for _, sug := range suggestions[0] {
 		sug.requires = map[int][]string{}
 		sug.root = true
+		if sug.inner != nil {
+			sug.Suggest.Description = sug.inner.description
+		}
+		if sug.inner != nil && len(sug.inner.aliases) > 0 {
+			for _, a := range sug.inner.aliases {
+				suggestions[0] = append(suggestions[0], &completion{
+					Suggest: cli.Suggest{Text: a, Description: sug.Description},
+					inner:   sug.inner,
+					root:    true,
+					isAlias: true,
+				})
+			}
+		}
 	}
-	suggestions[1] = []completion{
+
+	suggestions[1] = []*completion{
 		{Suggest: cli.Suggest{Text: "group", Description: "target group"}},
 		{Suggest: cli.Suggest{Text: "light", Description: "target light"}},
 	}
@@ -96,7 +127,7 @@ func init() {
 		sug.requires = map[int][]string{0: {"delete", "del", "set", "s"}}
 		sug.root = false
 	}
-	delCompletion := []completion{
+	delCompletion := []*completion{
 		{Suggest: cli.Suggest{Text: "scene", Description: "target scene"}},
 		{Suggest: cli.Suggest{Text: "schedule", Description: "target schedule"}},
 		{Suggest: cli.Suggest{Text: "sensor", Description: "target sensor"}},
