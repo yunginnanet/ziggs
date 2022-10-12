@@ -26,16 +26,13 @@ var errNoBridges = errors.New("no bridges available")
 
 type Meta struct {
 	Bridges  map[string]*Bridge
-	Lights   map[string]*HueLight
 	Switches map[string]*huego.Sensor
-	Groups   map[string]int
 	*sync.RWMutex
 }
 
 // Lucifer is the lightbringer.
 var Lucifer = Meta{
 	Bridges:  make(map[string]*Bridge),
-	Lights:   make(map[string]*HueLight),
 	Switches: make(map[string]*huego.Sensor),
 	RWMutex:  &sync.RWMutex{},
 }
@@ -283,9 +280,6 @@ func (c *Bridge) getLights() error {
 		}
 		log.Debug().Interface("new light", newlight.l).Msg("+")
 		c.HueLights = append(c.HueLights, newlight.l)
-		Lucifer.Lock()
-		Lucifer.Lights[light.Name] = newlight
-		Lucifer.Unlock()
 	}
 	return nil
 }

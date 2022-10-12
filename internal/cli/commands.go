@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/amimof/huego"
 	"github.com/davecgh/go-spew/spew"
 
 	"git.tcp.direct/kayos/ziggs/internal/ziggy"
@@ -145,10 +144,7 @@ func cmdSensors(br *ziggy.Bridge, args []string) error {
 }
 
 func cmdGroups(br *ziggy.Bridge, args []string) error {
-	groupmap, err := ziggy.GetGroupMap()
-	if err != nil {
-		return err
-	}
+	groupmap := ziggy.GetGroupMap()
 	if len(groupmap) == 0 {
 		return errors.New("no groups found")
 	}
@@ -215,49 +211,31 @@ func cmdRename(br *ziggy.Bridge, args []string) error {
 	if len(args) < 3 {
 		return errors.New("not enough arguments")
 	}
-	argID, err := strconv.Atoi(args[1])
-	if err != nil {
-		return err
+	type renameable interface {
+		Rename(string) error
 	}
+	var (
+		target renameable
+		err    error
+	)
 	switch args[0] {
 	case "light":
-		resp, err := br.UpdateLight(argID, huego.Light{Name: args[2]})
-		if err != nil {
-			return err
-		}
-		log.Info().Msgf("response: %v", resp)
+		target, err = br.FindLight(args[1])
 	case "group":
-		groupmap, err := ziggy.GetGroupMap()
-		if err != nil {
-			return err
-		}
-		_, ok := groupmap[args[1]]
-		if !ok {
-			return errors.New("group not found")
-		}
-		// g.Lights
+		target, err = br.FindGroup(args[1])
 	case "schedule":
-		resp, err := br.UpdateSchedule(argID, &huego.Schedule{Name: args[2]})
-		if err != nil {
-			return err
-		}
-		log.Info().Msgf("response: %v", resp)
+		return errors.New("not implemented")
 	case "rule":
-		resp, err := br.UpdateRule(argID, &huego.Rule{Name: args[2]})
-		if err != nil {
-			return err
-		}
-		log.Info().Msgf("response: %v", resp)
+		return errors.New("not implemented")
 	case "sensor":
-		resp, err := br.UpdateSensor(argID, &huego.Sensor{Name: args[2]})
-		if err != nil {
-			return err
-		}
-		log.Info().Msgf("response: %v", resp)
+		return errors.New("not implemented")
 	default:
 		return errors.New("invalid target type")
 	}
-	return nil
+	if err != nil {
+		return err
+	}
+	return target.Rename(args[2])
 }
 
 func cmdAdopt(br *ziggy.Bridge, args []string) error {

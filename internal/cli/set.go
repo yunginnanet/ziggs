@@ -51,11 +51,7 @@ func cmdSet(bridge *ziggy.Bridge, args []string) error {
 		log.Trace().Int("argHead", argHead).Msg(args[argHead])
 		switch args[argHead] {
 		case "group", "g":
-			var err error
-			groupMap, err = ziggy.GetGroupMap()
-			if err != nil {
-				return err
-			}
+			groupMap = ziggy.GetGroupMap()
 			if len(args) <= argHead-1 {
 				return errors.New("no group specified")
 			}

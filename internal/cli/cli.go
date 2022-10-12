@@ -152,10 +152,7 @@ func getHist() []string {
 func StartCLI() {
 	log = config.GetLogger()
 	processBridges()
-	grpmap, err := ziggy.GetGroupMap()
-	if err != nil {
-		log.Fatal().Err(err).Msg("error getting group map")
-	}
+	grpmap := ziggy.GetGroupMap()
 	processGroups(grpmap)
 	processLights()
 	prompt = cli.New(
