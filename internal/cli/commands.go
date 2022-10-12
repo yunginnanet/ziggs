@@ -231,9 +231,9 @@ func cmdRename(br *ziggy.Bridge, args []string) error {
 		err    error
 	)
 	switch args[0] {
-	case "light":
+	case "light", "l":
 		target, err = br.FindLight(args[1])
-	case "group":
+	case "group", "g":
 		target, err = br.FindGroup(args[1])
 	case "schedule":
 		return errors.New("not implemented")
