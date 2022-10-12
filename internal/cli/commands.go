@@ -153,9 +153,18 @@ func cmdGroups(br *ziggy.Bridge, args []string) error {
 		return errors.New("no groups found")
 	}
 	for n, g := range groupmap {
-		log.Info().Str("caller", strings.Split(br.Host, "://")[1]).
+		log.Info().Str("caller", g.Name).
 			Str("mapname", n).Str("type", g.Type).Int("ID", g.ID).
-			Str("class", g.Class).Bool("on", g.IsOn()).Msgf("Group: %s", g.Name)
+			Str("class", g.Class).Bool("on", g.IsOn()).Send()
+		for _, l := range g.Lights {
+			lid, _ := strconv.Atoi(l)
+			lght, err := br.GetLight(lid)
+			if err != nil {
+				log.Warn().Err(err).Msgf("failed to get light %s", l)
+				continue
+			}
+			log.Info().Msg("\t[" + strconv.Itoa(lght.ID) + "] " + lght.Name + " (" + lght.ProductName + ")")
+		}
 		log.Trace().Msgf("%v", spew.Sprint(g))
 	}
 	return nil
@@ -218,11 +227,15 @@ func cmdRename(br *ziggy.Bridge, args []string) error {
 		}
 		log.Info().Msgf("response: %v", resp)
 	case "group":
-		resp, err := br.UpdateGroup(argID, huego.Group{Name: args[2]})
+		groupmap, err := ziggy.GetGroupMap()
 		if err != nil {
 			return err
 		}
-		log.Info().Msgf("response: %v", resp)
+		_, ok := groupmap[args[1]]
+		if !ok {
+			return errors.New("group not found")
+		}
+		// g.Lights
 	case "schedule":
 		resp, err := br.UpdateSchedule(argID, &huego.Schedule{Name: args[2]})
 		if err != nil {
