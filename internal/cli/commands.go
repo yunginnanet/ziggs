@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/amimof/huego"
 	"github.com/davecgh/go-spew/spew"
@@ -242,6 +243,31 @@ func cmdRename(br *ziggy.Bridge, args []string) error {
 		log.Info().Msgf("response: %v", resp)
 	default:
 		return errors.New("invalid target type")
+	}
+	return nil
+}
+
+func cmdAdopt(br *ziggy.Bridge, args []string) error {
+	resp, err := br.FindLights()
+	if err != nil {
+		return err
+	}
+	log.Debug().Msgf(spew.Sprint(resp.Success))
+	newLights, err := br.GetNewLights()
+	if err != nil {
+		return err
+	}
+	print("searching")
+	for count := 0; count < 10; count++ {
+		print(".")
+		time.Sleep(1 * time.Second)
+	}
+	if len(newLights.Lights) == 0 {
+		return errors.New("no new lights found")
+	}
+	for _, l := range newLights.Lights {
+		log.Info().Msgf("[+] %s", l)
+		log.Trace().Msgf("%v", spew.Sprint(l))
 	}
 	return nil
 }

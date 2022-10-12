@@ -79,6 +79,7 @@ func init() {
 	Commands["delete"] = newZiggsCommand(cmdDelete, "delete objects from bridges", "del", "remove")
 	Commands["scan"] = newZiggsCommand(cmdScan, "scan for bridges/lights/sensors", "search", "find")
 	Commands["rename"] = newZiggsCommand(cmdRename, "rename object in bridge", "mv")
+	Commands["adopt"] = newZiggsCommand(cmdAdopt, "adopt new lights to the bridge")
 	Commands["set"] = newZiggsCommand(cmdSet, "update object properties in bridge", "update")
 	initCompletion()
 }
