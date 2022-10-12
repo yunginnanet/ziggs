@@ -170,36 +170,48 @@ func cmdDelete(br *ziggy.Bridge, args []string) error {
 	if len(args) < 2 {
 		return errors.New("not enough arguments")
 	}
-	argID, err := strconv.Atoi(args[1])
-	if err != nil {
-		return err
-	}
 	confirm := func() bool {
-		log.Info().Msgf("Are you sure you want to delete %s with ID %d? [y/N]", args[0], argID)
+		log.Info().Msgf("Are you sure you want to delete the %s identified as %s? [y/N]", args[0], args[1])
 		var input string
 		fmt.Scanln(&input)
 		return strings.ToLower(input) == "y"
 	}
 	switch args[0] {
 	case "light":
+		t, err := br.FindLight(args[1])
+		if err != nil {
+			return err
+		}
 		if confirm() {
-			return br.DeleteLight(argID)
+			return br.DeleteLight(t.ID)
 		}
 	case "group":
+		t, err := br.FindGroup(args[1])
+		if err != nil {
+			return err
+		}
 		if confirm() {
-			return br.DeleteGroup(argID)
+			return br.DeleteGroup(t.ID)
 		}
 	case "schedule":
 		if confirm() {
-			return br.DeleteSchedule(argID)
+			if argID, err := strconv.Atoi(args[1]); err == nil {
+				return br.DeleteSchedule(argID)
+			} else {
+				return err
+			}
 		}
 	case "rule":
-		if confirm() {
-			return br.DeleteRule(argID)
+		if argID, err := strconv.Atoi(args[1]); err == nil {
+			return br.DeleteSchedule(argID)
+		} else {
+			return err
 		}
 	case "sensor":
-		if confirm() {
-			return br.DeleteSensor(argID)
+		if argID, err := strconv.Atoi(args[1]); err == nil {
+			return br.DeleteSchedule(argID)
+		} else {
+			return err
 		}
 	default:
 		return errors.New("invalid target type")
