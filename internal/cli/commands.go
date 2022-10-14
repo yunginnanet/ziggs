@@ -302,7 +302,7 @@ func cmdLoad(br *ziggy.Bridge, args []string) error {
 	if len(args) < 1 {
 		return errors.New("not enough arguments")
 	}
-	js, err := os.ReadFile(args[1])
+	js, err := os.ReadFile(args[2])
 	if err != nil {
 		return err
 	}
