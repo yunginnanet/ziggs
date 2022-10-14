@@ -2,12 +2,15 @@ package cli
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/amimof/huego"
 	"github.com/davecgh/go-spew/spew"
 
 	"git.tcp.direct/kayos/ziggs/internal/ziggy"
@@ -177,7 +180,7 @@ func cmdDelete(br *ziggy.Bridge, args []string) error {
 		return strings.ToLower(input) == "y"
 	}
 	switch args[0] {
-	case "light":
+	case "light", "l":
 		t, err := br.FindLight(args[1])
 		if err != nil {
 			return err
@@ -185,7 +188,7 @@ func cmdDelete(br *ziggy.Bridge, args []string) error {
 		if confirm() {
 			return br.DeleteLight(t.ID)
 		}
-	case "group":
+	case "group", "g":
 		t, err := br.FindGroup(args[1])
 		if err != nil {
 			return err
@@ -248,6 +251,98 @@ func cmdRename(br *ziggy.Bridge, args []string) error {
 		return err
 	}
 	return target.Rename(args[2])
+}
+
+// cmdDump exports a target object to a JSON file
+func cmdDump(br *ziggy.Bridge, args []string) error {
+	if len(args) < 2 && args[0] != "all" {
+		return errors.New("not enough arguments")
+	}
+	var (
+		target interface{}
+		name   string
+		err    error
+	)
+	switch args[0] {
+	case "light", "l":
+		target, err = br.FindLight(args[1])
+		name = target.(*huego.Light).Name
+	case "group", "g":
+		target, err = br.FindGroup(args[1])
+		name = target.(*huego.Group).Name
+	case "schedule":
+		return errors.New("not implemented")
+	case "rule":
+		return errors.New("not implemented")
+	case "sensor":
+		return errors.New("not implemented")
+	case "bridge", "all":
+		target = br
+		name = br.Info.Name
+	default:
+		return errors.New("invalid target type")
+	}
+	if err != nil {
+		return err
+	}
+	if js, err := json.Marshal(target); err != nil {
+		return err
+	} else {
+		return os.WriteFile(name, js, 0o666)
+	}
+
+}
+
+// cmdLoad imports a target JSON object and attempts to apply it to an existing object
+func cmdLoad(br *ziggy.Bridge, args []string) error {
+	if len(args) < 1 {
+		return errors.New("not enough arguments")
+	}
+	js, err := os.ReadFile(args[1])
+	if err != nil {
+		return err
+	}
+	switch args[0] {
+	case "light", "l":
+		target, err := br.FindLight(args[1])
+		if err != nil {
+			return err
+		}
+		var l *huego.Light
+		if err := json.Unmarshal(js, &l); err != nil {
+			return err
+		}
+		if resp, err := br.UpdateLight(target.ID, *l); err != nil {
+			return err
+		} else {
+			log.Info().Msgf("%v", resp)
+		}
+	case "group", "g":
+		target, err := br.FindGroup(args[1])
+		if err != nil {
+			return err
+		}
+		var g *huego.Group
+		if err := json.Unmarshal(js, &g); err != nil {
+			return err
+		}
+		if resp, err := br.UpdateGroup(target.ID, *g); err != nil {
+			return err
+		} else {
+			log.Info().Msgf("%v", resp)
+		}
+	case "schedule":
+		return errors.New("not implemented")
+	case "rule":
+		return errors.New("not implemented")
+	case "sensor":
+		return errors.New("not implemented")
+	case "bridge":
+		return errors.New("not implemented")
+	default:
+		return errors.New("invalid target type")
+	}
+	return nil
 }
 
 func cmdAdopt(br *ziggy.Bridge, args []string) error {

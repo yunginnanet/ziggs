@@ -42,7 +42,6 @@ type Bridge struct {
 	config    *config.KnownBridge
 	Info      *huego.Config
 	log       *zerolog.Logger
-	debuglog  *zerolog.Logger
 	HueLights []*huego.Light
 	*huego.Bridge
 	*sync.RWMutex
