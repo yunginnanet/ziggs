@@ -15,10 +15,19 @@ func cmdCreate(br *ziggy.Bridge, args []string) error {
 	}
 	switch args[0] {
 	case "group":
-		var name = args[1]
-		var ids []string
+		var (
+			name      = args[1]
+			ids       []string
+			groupType = "LightGroup"
+			class     = ""
+		)
 		for _, arg := range args {
-			if arg == "group" || arg == name {
+			switch arg {
+			case "group", name:
+				continue
+			case "-entertainment":
+				groupType = "Entertainment"
+				class = "Other"
 				continue
 			}
 			_, err := strconv.Atoi(arg)
@@ -27,7 +36,7 @@ func cmdCreate(br *ziggy.Bridge, args []string) error {
 			}
 			ids = append(ids, arg)
 		}
-		resp, err := br.CreateGroup(huego.Group{Name: name, Lights: ids})
+		resp, err := br.CreateGroup(huego.Group{Name: name, Lights: ids, Type: groupType, Class: class})
 		if err != nil {
 			return err
 		}
