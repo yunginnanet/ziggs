@@ -266,9 +266,15 @@ func cmdDump(br *ziggy.Bridge, args []string) error {
 	switch args[0] {
 	case "light", "l":
 		target, err = br.FindLight(args[1])
+		if err != nil {
+			return err
+		}
 		name = target.(*huego.Light).Name
 	case "group", "g":
 		target, err = br.FindGroup(args[1])
+		if err != nil {
+			return err
+		}
 		name = target.(*huego.Group).Name
 	case "schedule":
 		return errors.New("not implemented")
@@ -282,9 +288,7 @@ func cmdDump(br *ziggy.Bridge, args []string) error {
 	default:
 		return errors.New("invalid target type")
 	}
-	if err != nil {
-		return err
-	}
+
 	if js, err := json.Marshal(target); err != nil {
 		return err
 	} else {
