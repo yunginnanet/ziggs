@@ -24,14 +24,14 @@ var (
 	cpuLastHue = make(map[int]uint16)
 )
 
+type reactor func(bridge *ziggy.Bridge, args []string) error
+
 type ziggsCommand struct {
 	reactor     reactor
 	description string
 	aliases     []string
 	isAlias     bool
 }
-
-type reactor func(bridge *ziggy.Bridge, args []string) error
 
 func newZiggsCommand(react reactor, desc string, aliases ...string) *ziggsCommand {
 	ret := &ziggsCommand{
@@ -255,7 +255,10 @@ func cmdRename(br *ziggy.Bridge, args []string) error {
 
 // cmdDump exports a target object to a JSON file
 func cmdDump(br *ziggy.Bridge, args []string) error {
-	if len(args) < 2 && args[0] != "all" {
+	if len(args) < 2 && args[0] != "all" && args[0] != "conf" && args[0] != "groups" &&
+		args[0] != "lights" && args[0] != "rules" && args[0] != "schedules" &&
+		args[0] != "sensors" && args[0] != "scenes" && args[0] != "resourcelinks" &&
+		args[0] != "config" {
 		return errors.New("not enough arguments")
 	}
 	var (
@@ -285,6 +288,14 @@ func cmdDump(br *ziggy.Bridge, args []string) error {
 	case "bridge", "all":
 		target = br
 		name = br.Info.Name
+	case "config":
+		var conf *huego.Config
+		conf, err = br.GetConfig()
+		if err != nil {
+			return err
+		}
+		target = conf
+		name = br.Info.BridgeID
 	default:
 		return errors.New("invalid target type")
 	}
@@ -299,16 +310,27 @@ func cmdDump(br *ziggy.Bridge, args []string) error {
 
 // cmdLoad imports a target JSON object and attempts to apply it to an existing object
 func cmdLoad(br *ziggy.Bridge, args []string) error {
-	if len(args) < 1 {
+	var js []byte
+	var err error
+	switch len(args) {
+	case 0, 1:
 		return errors.New("not enough arguments")
+	case 2:
+		js, err = os.ReadFile(args[1])
+	case 3:
+		js, err = os.ReadFile(args[2])
 	}
-	js, err := os.ReadFile(args[2])
 	if err != nil {
 		return err
 	}
+	if len(args) < 1 {
+		return errors.New("not enough arguments")
+	}
+
+	var target interface{}
 	switch args[0] {
 	case "light", "l":
-		target, err := br.FindLight(args[1])
+		target, err = br.FindLight(args[1])
 		if err != nil {
 			return err
 		}
@@ -316,13 +338,13 @@ func cmdLoad(br *ziggy.Bridge, args []string) error {
 		if err := json.Unmarshal(js, &l); err != nil {
 			return err
 		}
-		if resp, err := br.UpdateLight(target.ID, *l); err != nil {
+		if resp, err := br.UpdateLight(target.(*huego.Light).ID, *l); err != nil {
 			return err
 		} else {
 			log.Info().Msgf("%v", resp)
 		}
 	case "group", "g":
-		target, err := br.FindGroup(args[1])
+		target, err = br.FindGroup(args[1])
 		if err != nil {
 			return err
 		}
@@ -330,11 +352,21 @@ func cmdLoad(br *ziggy.Bridge, args []string) error {
 		if err := json.Unmarshal(js, &g); err != nil {
 			return err
 		}
-		if resp, err := br.UpdateGroup(target.ID, *g); err != nil {
+		if resp, err := br.UpdateGroup(target.(*huego.Group).ID, *g); err != nil {
 			return err
 		} else {
 			log.Info().Msgf("%v", resp)
 		}
+	case "config", "conf", "cfg":
+		var conf *huego.Config
+		if err = json.Unmarshal(js, &conf); err != nil {
+			return err
+		}
+		var resp *huego.Response
+		if resp, err = br.UpdateConfig(conf); err != nil {
+			return err
+		}
+		log.Info().Msgf("%v", resp)
 	case "schedule":
 		return errors.New("not implemented")
 	case "rule":

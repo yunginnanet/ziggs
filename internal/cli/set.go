@@ -23,6 +23,7 @@ type cmdTarget interface {
 	Col(color.Color) error
 	SetState(huego.State) error
 	Alert(string) error
+	Scene(string) error
 }
 
 func cmdSet(bridge *ziggy.Bridge, args []string) error {
@@ -36,7 +37,7 @@ func cmdSet(bridge *ziggy.Bridge, args []string) error {
 
 	var (
 		groupMap     map[string]*huego.Group
-		lightMap     map[string]*huego.Light
+		lightMap     map[string]*ziggy.HueLight
 		actions      []action
 		currentState *huego.State
 		argHead      = -1
@@ -194,7 +195,27 @@ func cmdSet(bridge *ziggy.Bridge, args []string) error {
 				return alErr
 			})
 		case "cpu", "cpu2":
-			go cpuInit(args[argHead], bridge, target)
+			go func() {
+				if err := cpuInit(args[argHead], bridge, target); err != nil {
+					log.Error().Err(err).Msg("cpu init failed")
+				}
+			}()
+			log.Info().Msg("cpu load lighting started")
+			return nil
+		case "scene", "sc":
+			if len(args) == argHead-1 {
+				return errors.New("not enough arguments")
+			}
+			argHead++
+			targetScene := args[argHead]
+			actions = append(actions, func() error {
+				err := target.Scene(targetScene)
+				if err != nil {
+					err = fmt.Errorf("failed to set scene: %w", err)
+				}
+				return err
+			})
+
 		default:
 			return fmt.Errorf("unknown argument: " + args[argHead])
 		}
@@ -206,7 +227,7 @@ func cmdSet(bridge *ziggy.Bridge, args []string) error {
 		return errors.New("no target specified")
 	}
 	tg, tgok := target.(*huego.Group)
-	tl, tlok := target.(*huego.Light)
+	tl, tlok := target.(*ziggy.HueLight)
 	switch {
 	case tgok:
 		currentState = tg.State

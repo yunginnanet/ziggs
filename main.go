@@ -33,7 +33,7 @@ func init() {
 func TurnAll(Known []*ziggy.Bridge, mode ziggy.ToggleMode) {
 	for _, bridge := range Known {
 		for _, l := range ziggy.GetLightMap() {
-			go func(l *huego.Light) {
+			go func(l *ziggy.HueLight) {
 				log.Debug().
 					Str("caller", bridge.Host).
 					Str("type", l.ProductName).

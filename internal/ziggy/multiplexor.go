@@ -8,8 +8,8 @@ type Multiplex struct {
 	bridges []*Bridge
 }
 
-func GetLightMap() map[string]*huego.Light {
-	var lightMap = make(map[string]*huego.Light)
+func GetLightMap() map[string]*HueLight {
+	var lightMap = make(map[string]*HueLight)
 	for _, c := range Lucifer.Bridges {
 		ls, err := c.GetLights()
 		if err != nil {
@@ -26,7 +26,7 @@ func GetLightMap() map[string]*huego.Light {
 				log.Warn().Msgf("duplicate light name %s on bridge %s - please rename", l.Name, c.ID)
 				continue
 			}
-			lightMap[l.Name] = light
+			lightMap[l.Name] = &HueLight{Light: light, controller: c}
 		}
 	}
 	return lightMap

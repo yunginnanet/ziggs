@@ -7,7 +7,7 @@ import (
 	"github.com/amimof/huego"
 )
 
-func (c *Bridge) FindLight(input string) (light *huego.Light, err error) {
+func (c *Bridge) FindLight(input string) (light *HueLight, err error) {
 	var lightID int
 	if lightID, err = strconv.Atoi(input); err != nil {
 		targ, ok := GetLightMap()[input]
@@ -16,7 +16,11 @@ func (c *Bridge) FindLight(input string) (light *huego.Light, err error) {
 		}
 		return targ, nil
 	}
-	return c.GetLight(lightID)
+	l, err := c.GetLight(lightID)
+	if err != nil {
+		return nil, err
+	}
+	return &HueLight{Light: l, controller: c}, nil
 }
 
 func (c *Bridge) FindGroup(input string) (light *huego.Group, err error) {
