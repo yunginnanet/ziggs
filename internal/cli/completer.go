@@ -82,7 +82,10 @@ func init() {
 	Commands["adopt"] = newZiggsCommand(cmdAdopt, "adopt new lights to the bridge")
 	Commands["dump"] = newZiggsCommand(cmdDump, "dump target object JSON to a file")
 	Commands["load"] = newZiggsCommand(cmdLoad, "load JSON from a file into the bridge")
-	Commands["set"] = newZiggsCommand(cmdSet, "update object properties in bridge", "update")
+	Commands["set"] = newZiggsCommand(cmdSet, "update object properties in bridge")
+	Commands["fwupdate"] = newZiggsCommand(cmdFirmwareUpdate, "inform bridge to check for updates",
+		"fwup", "upgrade")
+	Commands["info"] = newZiggsCommand(cmdInfo, "show information about a bridge", "uname")
 	initCompletion()
 }
 
@@ -129,6 +132,10 @@ func initCompletion() {
 	suggestions[1] = []*completion{
 		{Suggest: cli.Suggest{Text: "group", Description: "target group"}},
 		{Suggest: cli.Suggest{Text: "light", Description: "target light"}},
+		{Suggest: cli.Suggest{Text: "scene", Description: "target scene"}},
+		{Suggest: cli.Suggest{Text: "schedule", Description: "target schedule"}},
+		{Suggest: cli.Suggest{Text: "sensor", Description: "target sensor"}},
+		{Suggest: cli.Suggest{Text: "config", Description: "target bridge config"}},
 	}
 	for _, sug := range suggestions[1] {
 		sug.requires = map[int][]string{0: {"delete", "del", "set", "s", "rename", "mv", "dump", "load"}}
