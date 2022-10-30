@@ -10,10 +10,12 @@ func printUpdateInfo(c *huego.Config) {
 	log.Info().Msgf("Software version: %s", c.SwVersion)
 	log.Info().Msgf("API version: %s", c.APIVersion)
 	log.Info().Msgf("Datastore version: %s", c.DatastoreVersion)
-	log.Info().Msgf("Update state: %v", c.SwUpdate2.State)
+	if len(c.SwUpdate2.LastInstall) > 0 {
+		log.Info().Msgf("Last update: %v", c.SwUpdate2.LastInstall)
+	}
 	log.Info().Msgf("Auto install enabled: %t", c.SwUpdate2.AutoInstall.On)
 	log.Info().Msgf("Auto install time: %v", c.SwUpdate2.AutoInstall.UpdateTime)
-	log.Info().Msgf("Last update: %v", c.SwUpdate2.LastInstall)
+	log.Info().Msgf("Update state: %v", c.SwUpdate2.State)
 }
 
 func printNetworkInfo(c *huego.Config) {
