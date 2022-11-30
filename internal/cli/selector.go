@@ -1,12 +1,14 @@
 package cli
 
-import "git.tcp.direct/kayos/ziggs/internal/buffers"
+import "git.tcp.direct/kayos/common/pool"
+
+var buffers = pool.NewStringFactory()
 
 func (s *Selection) String() string {
 	if s.Bridge == "" && s.Action == "" {
 		return "~"
 	}
-	builder := buffers.Stringers.Get()
+	builder := buffers.Get()
 	builder.WriteString(s.Bridge)
 	if s.Action != "" {
 		builder.WriteString("/")
@@ -22,7 +24,7 @@ func (s *Selection) String() string {
 		builder.WriteString(s.Target.Name)
 	}
 	res := builder.String()
-	buffers.Stringers.Put(builder)
+	buffers.MustPut(builder)
 	return res
 }
 

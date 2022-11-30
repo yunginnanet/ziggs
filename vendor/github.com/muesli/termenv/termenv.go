@@ -43,7 +43,6 @@ func isTTY(fd uintptr) bool {
 // Ascii, ANSI, ANSI256, or TrueColor.
 func ColorProfile() Profile {
 	if !isTTY(os.Stdout.Fd()) {
-		println("not tty")
 		return Ascii
 	}
 

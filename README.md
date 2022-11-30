@@ -6,7 +6,7 @@ There are zigbees in my head.
 
 ### Huh?
 
-This tool was only planned as a personal tool for myself, consequentially the codebase is pretty messy.
+This tool was only planned as a personal tool for myself, consequently the codebase is pretty messy.
 
 With that being said, it should work fairly well to provide a command line interface for Phillips Hue brudges.
 

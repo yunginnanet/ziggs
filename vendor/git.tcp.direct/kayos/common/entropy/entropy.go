@@ -39,6 +39,14 @@ func GetOptimizedRand() *rand.Rand {
 	return rand.New(r)
 }
 
+// GetSharedRand returns a pointer to our shared optimized rand.Rand which uses crypto/rand to seed a splitmix64 rng.
+func GetSharedRand() *rand.Rand {
+	getSharedRand.Do(func() {
+		sharedRand = GetOptimizedRand()
+	})
+	return sharedRand
+}
+
 // RNGUint32 returns a random uint32 using crypto/rand and splitmix64.
 func RNGUint32() uint32 {
 	getSharedRand.Do(func() {
@@ -47,13 +55,13 @@ func RNGUint32() uint32 {
 	return sharedRand.Uint32()
 }
 
-/*RNG returns integer with a maximum amount of 'n' using a global/shared instance of a splitmix64 rng.
+/*
+RNG returns integer with a maximum amount of 'n' using a global/shared instance of a splitmix64 rng.
   - Benchmark_FastRandStr5-24            25205089      47.03 ns/op
   - Benchmark_FastRandStr25-24       	7113620     169.8  ns/op
   - Benchmark_FastRandStr55-24       	3520297     340.7  ns/op
   - Benchmark_FastRandStr500-24      	 414966    2837    ns/op
   - Benchmark_FastRandStr55555-24    	   3717  315229    ns/op
-
 */
 func RNG(n int) int {
 	getSharedRand.Do(func() {

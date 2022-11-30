@@ -48,9 +48,6 @@ func (c *CompletionManager) GetSelectedSuggestion() (s Suggest, ok bool) {
 		c.selected = -1
 		return Suggest{}, false
 	}
-	if len(c.tmp) == 0{
-		return Suggest{}, false
-	}
 	return c.tmp[c.selected], true
 }
 

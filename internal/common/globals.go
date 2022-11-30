@@ -1,14 +1,25 @@
 package common
 
-import "os"
-
-var (
-	Home string
+import (
+	"os"
+	"runtime/debug"
 )
 
+var Home string
+
+func Version() (compileTime string, vcsRev string) {
+	binInfo := make(map[string]string)
+	info, ok := debug.ReadBuildInfo()
+	if !ok {
+		return
+	}
+	for _, v := range info.Settings {
+		binInfo[v.Key] = v.Value
+	}
+	return binInfo["vcs.time"], binInfo["vcs.revision"]
+}
+
 const (
-	// Version roughly represents the applications current version.
-	Version = "0.1"
 	// Title is the name of the application used throughout the configuration process.
 	Title = "ziggs"
 )

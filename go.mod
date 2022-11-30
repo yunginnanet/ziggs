@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	git.tcp.direct/Mirrors/go-prompt v0.3.0
-	git.tcp.direct/kayos/common v0.7.2-0.20220825111102-24fbc6514af5
+	git.tcp.direct/kayos/common v0.7.6
 	git.tcp.direct/tcp.direct/database v0.0.0-20220829103039-b85255196bd1
 	github.com/amimof/huego v1.2.1
 	github.com/davecgh/go-spew v1.1.1

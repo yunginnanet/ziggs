@@ -19,6 +19,7 @@ func init() {
 }
 
 func writeConfig() {
+	//goland:noinspection GoBoolExpressions
 	if runtime.GOOS == "windows" {
 		newconfig := common.Title
 		Snek.SetConfigName(newconfig)
@@ -83,6 +84,7 @@ func setDefaults() {
 		deflogdir      = common.Home + "/.config/" + common.Title + "/logs/"
 		defNoColor     = false
 	)
+	//goland:noinspection GoBoolExpressions
 	if runtime.GOOS == "windows" {
 		deflogdir = "logs/"
 		defNoColor = true
@@ -124,7 +126,7 @@ func setDefaults() {
 
 func setConfigFileLocations() {
 	configLocations = append(configLocations, "./")
-
+	//goland:noinspection GoBoolExpressions
 	if runtime.GOOS != "windows" {
 		configLocations = append(configLocations,
 			prefConfigLocation,
@@ -152,7 +154,8 @@ func loadCustomConfig(path string) {
 }
 
 func printUsage() {
-	println("\n" + common.Title + " v" + common.Version + " Usage\n")
+	_, version := common.Version()
+	println("\n" + common.Title + " v" + version[:7] + " Usage\n")
 	println("-c <config.toml> - Specify config file")
 	println("--nocolor - disable color and banner ")
 	println("--genconfig - write default config to 'default.toml' then exit")

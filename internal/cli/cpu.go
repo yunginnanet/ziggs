@@ -26,7 +26,7 @@ func cpuInit(argVal string, bridge *ziggy.Bridge, cpuTarget cmdTarget) error {
 	cpuCtx, cpuCancel = context.WithCancel(context.Background())
 	if argVal == "cpu" {
 		load, err = system.CPULoadGradient(cpuCtx,
-			"cornflowerblue", "deepskyblue", "gold", "deeppink", "darkorange", "red")
+			"cornflowerblue", "deepskyblue", "#FFD700", "deeppink", "darkorange", "red", "#FFFFFF")
 		if err != nil {
 			return err
 		}
