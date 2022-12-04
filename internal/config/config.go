@@ -155,7 +155,12 @@ func loadCustomConfig(path string) {
 
 func printUsage() {
 	_, version := common.Version()
-	println("\n" + common.Title + " v" + version[:7] + " Usage\n")
+	if len(version) < 8 {
+		version = "DEVEL"
+	}
+	println("---> " + common.Title + " <---")
+	println("->build " + version[:5] + "<-")
+	println("Usage\n")
 	println("-c <config.toml> - Specify config file")
 	println("--nocolor - disable color and banner ")
 	println("--genconfig - write default config to 'default.toml' then exit")
