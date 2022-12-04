@@ -1,7 +1,29 @@
+# art n' stuff
 assets/
+
+# jebrains
 .idea
-*.unused
-*.toml
+
+# nano
 *.swp
-*.test
 *.save
+
+# misc
+*.unused
+*.test
+
+# config
+*.toml
+
+# dumped configs
+*.json
+
+# vendor stuff
+vendor/**/*_test.go
+vendor/**/*.mod
+vendor/**/*.sum
+vendor/**/*.png
+vendor/**/*.svg
+
+# build
+ziggs

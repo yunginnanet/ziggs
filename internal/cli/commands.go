@@ -303,7 +303,7 @@ func cmdDump(br *ziggy.Bridge, args []string) error {
 	if js, err := json.Marshal(target); err != nil {
 		return err
 	} else {
-		return os.WriteFile(name, js, 0o666)
+		return os.WriteFile(name+".json", js, 0o666)
 	}
 
 }

@@ -158,12 +158,11 @@ func printUsage() {
 	if len(version) < 8 {
 		version = "DEVEL"
 	}
-	println("---> " + common.Title + " <---")
-	println("->build " + version[:5] + "<-")
-	println("Usage\n")
-	println("-c <config.toml> - Specify config file")
-	println("--nocolor - disable color and banner ")
-	println("--genconfig - write default config to 'default.toml' then exit")
+	println("\t\t---> " + common.Title + " <---")
+	println("\t\t->build " + version[:5] + "<-\n")
+	println("-c <config.toml> \t Specify config file")
+	println("--nocolor \t\t disable color and banner ")
+	println("--genconfig \t\t write default config to 'default.toml' then exit")
 	os.Exit(0)
 }
 
