@@ -207,6 +207,9 @@ func cmdSet(bridge *ziggy.Bridge, args []string) error {
 				return errors.New("not enough arguments")
 			}
 			argHead++
+			if argHead > len(args)-1 {
+				return errors.New("not enough arguments")
+			}
 			targetScene := args[argHead]
 			actions = append(actions, func() error {
 				err := target.Scene(targetScene)
