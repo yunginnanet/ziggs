@@ -52,6 +52,7 @@ func executor(cmd string) {
 		debuglevels := map[zerolog.Level]string{zerolog.InfoLevel: "info", zerolog.DebugLevel: "debug", zerolog.TraceLevel: "trace"}
 		if len(args) < 2 {
 			println("current debug level: " + debuglevels[log.GetLevel()])
+			return
 		}
 		if newlevel, ok := levelsdebug[args[1]]; ok {
 			zerolog.SetGlobalLevel(newlevel)
