@@ -272,7 +272,12 @@ func cmdDump(br *ziggy.Bridge, args []string) error {
 		if err != nil {
 			return err
 		}
-		name = target.(*huego.Light).Name
+		lght, ok := target.(*huego.Light)
+		if !ok {
+			name = target.(*ziggy.HueLight).Name
+		} else {
+			name = lght.Name
+		}
 	case "group", "g":
 		target, err = br.FindGroup(args[1])
 		if err != nil {
