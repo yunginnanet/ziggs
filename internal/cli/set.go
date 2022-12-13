@@ -177,7 +177,11 @@ func cmdSet(bridge *ziggy.Bridge, args []string) error {
 			argHead++
 			newTemp, numErr := strconv.Atoi(args[argHead])
 			if numErr != nil || newTemp > 500 || newTemp < 153 {
-				return fmt.Errorf("given temperature is not a valid number: %w", numErr)
+				terr := fmt.Errorf("given temperature is not a valid number: %w", numErr)
+				if numErr == nil {
+					terr = fmt.Errorf("temperature must be greater than 153 and less than 500")
+				}
+				return terr
 			}
 			actions = append(actions, func() error {
 				err := target.Ct(uint16(newTemp))
