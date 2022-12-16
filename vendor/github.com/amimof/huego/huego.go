@@ -85,7 +85,7 @@ func unmarshal(data []byte, v interface{}) error {
 	return nil
 }
 
-func get(ctx context.Context, url string, client *http.Client) ([]byte, error) {
+func get(ctx context.Context, url string) ([]byte, error) {
 
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
@@ -94,6 +94,7 @@ func get(ctx context.Context, url string, client *http.Client) ([]byte, error) {
 
 	req = req.WithContext(ctx)
 
+	client := http.DefaultClient
 	res, err := client.Do(req)
 	if err != nil {
 		return nil, err
@@ -110,7 +111,7 @@ func get(ctx context.Context, url string, client *http.Client) ([]byte, error) {
 	return body, nil
 }
 
-func put(ctx context.Context, url string, data []byte, client *http.Client) ([]byte, error) {
+func put(ctx context.Context, url string, data []byte) ([]byte, error) {
 
 	body := strings.NewReader(string(data))
 
@@ -123,6 +124,7 @@ func put(ctx context.Context, url string, data []byte, client *http.Client) ([]b
 
 	req.Header.Set(contentType, applicationJSON)
 
+	client := http.DefaultClient
 	res, err := client.Do(req)
 	if err != nil {
 		return nil, err
@@ -139,7 +141,7 @@ func put(ctx context.Context, url string, data []byte, client *http.Client) ([]b
 
 }
 
-func post(ctx context.Context, url string, data []byte, client *http.Client) ([]byte, error) {
+func post(ctx context.Context, url string, data []byte) ([]byte, error) {
 
 	body := strings.NewReader(string(data))
 
@@ -152,6 +154,7 @@ func post(ctx context.Context, url string, data []byte, client *http.Client) ([]
 
 	req.Header.Set(contentType, applicationJSON)
 
+	client := http.DefaultClient
 	res, err := client.Do(req)
 	if err != nil {
 		return nil, err
@@ -168,7 +171,8 @@ func post(ctx context.Context, url string, data []byte, client *http.Client) ([]
 
 }
 
-func del(ctx context.Context, url string, client *http.Client) ([]byte, error) {
+func delete(ctx context.Context, url string) ([]byte, error) {
+
 	req, err := http.NewRequest(http.MethodDelete, url, nil)
 	if err != nil {
 		return nil, err
@@ -178,6 +182,7 @@ func del(ctx context.Context, url string, client *http.Client) ([]byte, error) {
 
 	req.Header.Set(contentType, applicationJSON)
 
+	client := http.DefaultClient
 	res, err := client.Do(req)
 	if err != nil {
 		return nil, err
@@ -244,6 +249,7 @@ func Discover() (*Bridge, error) {
 // DiscoverContext performs a discovery on the network looking for bridges using https://www.meethue.com/api/nupnp service.
 // DiscoverContext uses DiscoverAllContext() but only returns the first instance in the array of bridges if any.
 func DiscoverContext(ctx context.Context) (*Bridge, error) {
+
 	b := &Bridge{}
 
 	bridges, err := DiscoverAllContext(ctx)
@@ -263,40 +269,5 @@ func DiscoverContext(ctx context.Context) (*Bridge, error) {
 // h may or may not be prefixed with http(s)://. For example http://192.168.1.20/ or 192.168.1.20.
 // u is a username known to the bridge. Use Discover() and CreateUser() to create a user.
 func New(h, u string) *Bridge {
-	return &Bridge{
-		Host:   h,
-		User:   u,
-		ID:     "",
-		client: http.DefaultClient,
-	}
-}
-
-/*NewWithClient instantiates and returns a new Bridge with a custom HTTP client.
-NewWithClient accepts the same parameters as New, but with an additional acceptance of an http.Client.
-
- - h may or may not be prefixed with http(s)://. For example http://192.168.1.20/ or 192.168.1.20.
- - u is a username known to the bridge. Use Discover() and CreateUser() to create a user.
- - Difference between New and NewWithClient being the ability to implement your own http.RoundTripper for proxying.*/
-func NewWithClient(h, u string, client *http.Client) *Bridge {
-	return &Bridge{
-		Host:   h,
-		User:   u,
-		ID:     "",
-		client: client,
-	}
-}
-
-/*NewCustom instantiates and returns a new Bridge. NewCustom accepts:
-  - a raw JSON []byte slice as input for substantiating the Bridge type
-  - a custom HTTP client like NewWithClient that will be used to make API requests
-
-Note that this is for advanced users, the other "New" functions may suit you better.*/
-func NewCustom(raw []byte, host string, client *http.Client) (*Bridge, error) {
-	br := &Bridge{}
-	if err := json.Unmarshal(raw, br); err != nil {
-		return nil, err
-	}
-	br.Host = host
-	br.client = client
-	return br, nil
+	return &Bridge{h, u, ""}
 }

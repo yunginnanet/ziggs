@@ -20,6 +20,7 @@ git.tcp.direct/Mirrors/go-prompt/internal/term
 git.tcp.direct/kayos/common/entropy
 git.tcp.direct/kayos/common/network
 git.tcp.direct/kayos/common/pool
+git.tcp.direct/kayos/common/squish
 # git.tcp.direct/tcp.direct/database v0.0.0-20220829103039-b85255196bd1
 ## explicit; go 1.18
 git.tcp.direct/tcp.direct/database

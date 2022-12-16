@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	stores = []string{"aliases", "sequences"}
+	stores = []string{"macros"}
 	istest = false
 	once   = &sync.Once{}
 	target string
