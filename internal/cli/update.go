@@ -65,7 +65,7 @@ func watchUpdateStatus(br *ziggy.Bridge, timeout time.Duration) (context.Context
 				case "noupdates":
 					log.Info().Msg("no updates available")
 					cancel()
-				case "allreadytoinstall":
+				case "allreadytoinstall", "anyreadytoinstall":
 					log.Info().Msg("all updates ready to install")
 					log.Info().Msg("installing updates...")
 					if _, err := br.UpdateConfig(&huego.Config{SwUpdate2: huego.SwUpdate2{Install: true}}); err != nil {
@@ -119,7 +119,7 @@ func streamUpdateStatus(br *ziggy.Bridge, ctx context.Context, cancel context.Ca
 					time.Sleep(1 * time.Second)
 					continue
 				}
-				log.Trace().Msgf("bridge update state: %s", c.SwUpdate2.State)
+				log.Debug().Msgf("bridge update state: %s", c.SwUpdate2.State)
 				ch <- c.SwUpdate2.State
 			}
 		}
