@@ -13,18 +13,18 @@ func processGroups(grps map[string]*huego.Group) {
 		if g.Type != "" {
 			suffix = " (" + g.Type + ")"
 		}
-		suggestions[2] = append(suggestions[2],
-			&completion{
-				Suggest: cli.Suggest{
-					Text:        grp,
-					Description: "Group" + suffix,
-				},
-				requires: map[int][]string{
-					0: {"set", "s", "delete", "d"},
-					1: {"group", "g"},
-				},
-				root: false,
-			})
+
+		suggestions[2][grp] = &completion{
+			Suggest: cli.Suggest{
+				Text:        grp,
+				Description: "Group" + suffix,
+			},
+			requires: map[int]map[string]bool{
+				1: {"set": true, "s": true, "delete": true, "d": true},
+				2: {"group": true, "g": true},
+			},
+			root: false,
+		}
 	}
 }
 
@@ -34,31 +34,29 @@ func processLights() {
 		if l.Type != "" {
 			suffix = " (" + l.Type + ")"
 		}
-		suggestions[2] = append(suggestions[2],
-			&completion{
-				Suggest: cli.Suggest{
-					Text:        lt,
-					Description: "Light" + suffix,
-				},
-				requires: map[int][]string{
-					0: {"set", "s", "delete", "d", "rename", "r"},
-					1: {"light", "l"},
-				},
-				root: false,
-			})
+		suggestions[2][lt] = &completion{
+			Suggest: cli.Suggest{
+				Text:        lt,
+				Description: "Light" + suffix,
+			},
+			requires: map[int]map[string]bool{
+				1: {"set": true, "s": true, "delete": true, "d": true},
+				2: {"light": true, "l": true},
+			},
+			root: false,
+		}
 	}
 }
 
 func processBridges() {
 	for brd, b := range ziggy.Lucifer.Bridges {
-		suggestions[1] = append(suggestions[1],
-			&completion{
-				Suggest: cli.Suggest{
-					Text:        brd,
-					Description: "Bridge: " + b.Host,
-				},
-				requires: map[int][]string{0: {"use", "u"}},
-				root:     false,
-			})
+		suggestions[1]["bridge"] = &completion{
+			Suggest: cli.Suggest{
+				Text:        brd,
+				Description: "Bridge: " + b.Host,
+			},
+			requires: map[int]map[string]bool{0: {"use": true, "u": true}},
+			root:     false,
+		}
 	}
 }

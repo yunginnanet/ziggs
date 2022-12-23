@@ -31,9 +31,10 @@ type ziggsCommand struct {
 	description string
 	aliases     []string
 	isAlias     bool
+	requires    int // number of arguments required
 }
 
-func newZiggsCommand(react reactor, desc string, aliases ...string) *ziggsCommand {
+func newZiggsCommand(react reactor, desc string, requires int, aliases ...string) *ziggsCommand {
 	ret := &ziggsCommand{
 		reactor:     react,
 		aliases:     aliases,
