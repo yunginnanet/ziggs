@@ -32,5 +32,7 @@ With that being said, it should work fairly well to provide a command line inter
   - **port scan to find offline (no call home) bridges on LAN**
     - see gif above for demonstration
     - config will automatically save when a bridge connection is established
+  - **trigger firmware updates for bridge and lights manually**
+    - e.g: `upgrade`
 ---
 

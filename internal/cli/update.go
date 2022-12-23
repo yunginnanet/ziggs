@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/amimof/huego"
@@ -26,7 +27,11 @@ func cmdFirmwareUpdate(br *ziggy.Bridge, args []string) error {
 	if resp, err = br.UpdateConfig(&huego.Config{SwUpdate2: huego.SwUpdate2{CheckForUpdate: true}}); err == nil {
 		log.Info().Msgf("response: %v", resp)
 	} else {
-		log.Warn().Msgf("failed to issue update command: %v", err)
+		if strings.Contains(err.Error(), "devicetype") {
+			log.Debug().Msgf("non-consequential error response: %v", err)
+		} else {
+			log.Warn().Msgf("failed to issue update command: %v", err)
+		}
 	}
 
 	ctx, cancel := watchUpdateStatus(br, 5*time.Minute)
