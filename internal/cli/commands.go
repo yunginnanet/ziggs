@@ -411,3 +411,12 @@ func cmdAdopt(br *ziggy.Bridge, args []string) error {
 	}
 	return nil
 }
+
+func cmdReboot(br *ziggy.Bridge, args []string) error {
+	resp, err := br.UpdateConfig(&huego.Config{Reboot: true})
+	if err != nil {
+		return err
+	}
+	log.Info().Msgf("%v", resp)
+	return nil
+}

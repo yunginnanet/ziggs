@@ -86,6 +86,7 @@ func init() {
 		"fwup", "upgrade", "fwupdate")
 	Commands["info"] = newZiggsCommand(cmdInfo, "show information about a bridge", 0, "uname")
 	initCompletion()
+	Commands["reboot"] = newZiggsCommand(cmdReboot, "reboot bridge", 0)
 }
 
 func initCompletion() {
