@@ -3,8 +3,6 @@ package data
 import (
 	"os"
 	"testing"
-
-	"github.com/davecgh/go-spew/spew"
 )
 
 func TestUsers(t *testing.T) {
@@ -22,7 +20,7 @@ func TestUsers(t *testing.T) {
 		if _, err := GetUser("test"); err == nil {
 			t.Fatal("expected error getting user with no auth method")
 		}
-		if err := NewUser("test", &UserPass{Username: "test", Password: "test"}); err != nil {
+		if err := NewUser("test", NewUserPass("test", "test")); err != nil {
 			t.Fatal(err)
 		}
 		tu, err := GetUser("test")
@@ -64,8 +62,6 @@ func TestUsers(t *testing.T) {
 			Pub:      []byte("test"),
 		}
 		if err = auth.Authenticate(); err != nil {
-			spew.Dump(user)
-			spew.Dump(auth)
 			t.Fatalf("expected auth to succeed, got: %v", err)
 		}
 		auth.Pub = []byte("test2")
@@ -84,7 +80,7 @@ func TestUsers(t *testing.T) {
 		if err = user.DelPubKey([]byte("test")); err != nil {
 			t.Fatal(err)
 		}
-		auth := &UserPass{Username: "test", Password: "test"}
+		auth := NewUserPass("test", "test")
 		if err := auth.Authenticate(); err != nil {
 			t.Fatalf("expected userpass to still be there after deleting public key, got: %v", err)
 		}
@@ -97,11 +93,11 @@ func TestUsers(t *testing.T) {
 		if err = user.ChangePassword("test2"); err != nil {
 			t.Fatal(err)
 		}
-		auth := &UserPass{Username: "test", Password: "test"}
+		auth := NewUserPass("test", "test")
 		if err = auth.Authenticate(); err == nil {
 			t.Fatal("expected auth to fail using old password")
 		}
-		auth.Password = "test2"
+		auth = NewUserPass("test", "test2")
 		if err = auth.Authenticate(); err != nil {
 			t.Fatalf("expected auth to succeed using new password, got: %v", err)
 		}

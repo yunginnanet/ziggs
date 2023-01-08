@@ -23,6 +23,17 @@ type UserPass struct {
 	Password string `json:"password"`
 }
 
+func NewUserPass(username, password string) *UserPass {
+	hash, err := HashPassword(password)
+	if err != nil {
+		panic(err)
+	}
+	return &UserPass{
+		Username: username,
+		Password: hash,
+	}
+}
+
 func (u *UserPass) Name() string {
 	return "password"
 }
@@ -37,9 +48,7 @@ func (u *UserPass) Authenticate() error {
 	for _, method := range user.authMethods {
 		if method.Name() == "password" {
 			userPass := method.(*UserPass)
-			if userPass.Password == u.Password {
-				return nil
-			}
+			CheckPasswordHash(u.Password, userPass.Password)
 		}
 	}
 	return ErrAccessDenied
@@ -61,6 +70,7 @@ func (p PubKey) Authenticate() error {
 		FakeCycle()
 		return ErrAccessDenied
 	}
+	spew.Dump(u)
 	for _, method := range u.authMethods {
 		if method.Name() == "publickey" {
 			pubKey := method.(*PubKey)

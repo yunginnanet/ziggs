@@ -16,6 +16,7 @@ require (
 	github.com/muesli/termenv v0.12.0
 	github.com/rs/zerolog v1.27.0
 	github.com/spf13/viper v1.12.0
+	golang.org/x/crypto v0.0.0-20220826181053-bd7e27e6170d
 	golang.org/x/net v0.0.0-20220826154423-83b083e8dc8b
 	inet.af/netaddr v0.0.0-20220811202034-502d2d690317
 )
@@ -50,7 +51,6 @@ require (
 	github.com/subosito/gotenv v1.3.0 // indirect
 	go4.org/intern v0.0.0-20211027215823-ae77deb06f29 // indirect
 	go4.org/unsafe/assume-no-moving-gc v0.0.0-20220617031537-928513b29760 // indirect
-	golang.org/x/crypto v0.0.0-20220826181053-bd7e27e6170d // indirect
 	golang.org/x/exp v0.0.0-20200228211341-fcea875c7e85 // indirect
 	golang.org/x/sys v0.0.0-20220825204002-c680a09ffe64 // indirect
 	golang.org/x/text v0.3.7 // indirect
