@@ -41,7 +41,7 @@ type CompletionManager struct {
 
 // GetSelectedSuggestion returns the selected item.
 func (c *CompletionManager) GetSelectedSuggestion() (s Suggest, ok bool) {
-	if c.selected == -1 || len(c.tmp) == 0 {
+	if c.selected == -1 {
 		return Suggest{}, false
 	} else if c.selected < -1 {
 		debug.Assert(false, "must not reach here")

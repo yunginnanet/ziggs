@@ -191,6 +191,8 @@ func processOpts() {
 		"http.bind_addr":   &HTTPBind,
 		"logger.directory": &LogDir,
 		"http.api_key":     &APIKey,
+		"ssh.listen":       &SSHListen,
+		"ssh.host_key":     &SSHHostKey,
 	}
 	// bool options and their exported variables
 	boolOpt := map[string]*bool{

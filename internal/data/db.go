@@ -2,6 +2,7 @@ package data
 
 import (
 	"os"
+	"path/filepath"
 	"strconv"
 	"sync"
 	"time"
@@ -13,22 +14,24 @@ import (
 )
 
 var (
-	stores = []string{"macros"}
-	istest = false
-	once   = &sync.Once{}
-	target string
-	db     *bitcask.DB
+	stores       = []string{"macros", "users", "sequences"}
+	isTest       = false
+	once         = &sync.Once{}
+	target       string
+	db           *bitcask.DB
+	testLocation string
 )
 
 func testMode() {
-	istest = true
+	isTest = true
 }
 
 func setTarget() {
-	if !istest {
+	if !isTest {
 		target = common.Home + "/.local/share/" + common.Title + "/"
 	}
-	target = "/tmp/" + common.Title + "/test" + strconv.Itoa(int(time.Now().UnixNano()))
+	testLocation = filepath.Join("/tmp", common.Title, strconv.FormatInt(time.Now().UnixNano(), 10))
+	target = testLocation
 }
 
 func kv() *bitcask.DB {
@@ -36,19 +39,28 @@ func kv() *bitcask.DB {
 	return db
 }
 
+func startDB() {
+	setTarget()
+	if isTest {
+		_ = os.RemoveAll(testLocation)
+	}
+	if err := os.MkdirAll(target, 0o755); err != nil {
+		log.Fatal().Err(err).Msg("error creating data directory")
+	}
+	db = bitcask.OpenDB(target)
+	for _, store := range stores {
+		if err := db.Init(store); err != nil {
+			log.Fatal().Err(err).Str("store", store).Msg("error initializing store")
+		}
+	}
+}
+
 func Start() {
-	once.Do(func() {
-		setTarget()
-		if err := os.MkdirAll(target, 0o755); err != nil {
-			log.Fatal().Err(err).Msg("error creating data directory")
-		}
-		db = bitcask.OpenDB(target)
-		for _, store := range stores {
-			if err := db.Init(store); err != nil {
-				log.Fatal().Err(err).Str("store", store).Msg("error initializing store")
-			}
-		}
-	})
+	if !isTest {
+		once.Do(startDB)
+		return
+	}
+	startDB()
 }
 
 func Close() {

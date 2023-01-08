@@ -17,7 +17,7 @@ var (
 )
 
 var (
-	// GenConfig when toggled causes HellPot to write its default config to the cwd and then exit.
+	// GenConfig when toggled causes ziggs to write its default config to the cwd and then exit.
 	GenConfig = false
 	// NoColor stops zerolog from outputting color, necessary on Windows.
 	NoColor = true
@@ -39,12 +39,16 @@ var KnownBridges []KnownBridge
 
 // "http"
 var (
-	// HTTPBind is defined via our toml configuration file. It is the address that HellPot listens on.
+	// HTTPBind is defined via our toml configuration file. It is the address that ziggs listens on.
 	HTTPBind string
-	// HTTPPort is defined via our toml configuration file. It is the port that HellPot listens on.
+	// HTTPPort is defined via our toml configuration file. It is the port that ziggs listens on.
 	HTTPPort int
 	// APIKey represents our key for API authentication.
 	APIKey string
+	// SSHListen is the address that ziggs listens on for SSH connections.
+	SSHListen string
+	// SSHHostKey is the path to the SSH host key, if any. If none is specified, one will be generated.
+	SSHHostKey string
 )
 
 var (

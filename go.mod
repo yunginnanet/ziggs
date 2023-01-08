@@ -9,19 +9,21 @@ require (
 	github.com/amimof/huego v1.2.1
 	github.com/davecgh/go-spew v1.1.1
 	github.com/dhamith93/systats v0.2.0
+	github.com/gliderlabs/ssh v0.3.5
 	github.com/lucasb-eyer/go-colorful v1.2.0
 	github.com/manifoldco/promptui v0.9.0
 	github.com/mazznoer/colorgrad v0.9.0
 	github.com/muesli/termenv v0.12.0
 	github.com/rs/zerolog v1.27.0
 	github.com/spf13/viper v1.12.0
-	golang.org/x/net v0.0.0-20220520000938-2e3eb7b945c2
+	golang.org/x/net v0.0.0-20220826154423-83b083e8dc8b
 	inet.af/netaddr v0.0.0-20220811202034-502d2d690317
 )
 
 require (
 	git.tcp.direct/Mirrors/bitcask-mirror v0.0.0-20220228092422-1ec4297c7e34 // indirect
 	github.com/abcum/lcp v0.0.0-20201209214815-7a3f3840be81 // indirect
+	github.com/anmitsu/go-shlex v0.0.0-20200514113438-38f4b401e2be // indirect
 	github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e // indirect
 	github.com/fsnotify/fsnotify v1.5.4 // indirect
 	github.com/gofrs/flock v0.8.0 // indirect
@@ -48,8 +50,9 @@ require (
 	github.com/subosito/gotenv v1.3.0 // indirect
 	go4.org/intern v0.0.0-20211027215823-ae77deb06f29 // indirect
 	go4.org/unsafe/assume-no-moving-gc v0.0.0-20220617031537-928513b29760 // indirect
+	golang.org/x/crypto v0.0.0-20220826181053-bd7e27e6170d // indirect
 	golang.org/x/exp v0.0.0-20200228211341-fcea875c7e85 // indirect
-	golang.org/x/sys v0.0.0-20220614162138-6c1b26c55098 // indirect
+	golang.org/x/sys v0.0.0-20220825204002-c680a09ffe64 // indirect
 	golang.org/x/text v0.3.7 // indirect
 	gopkg.in/ini.v1 v1.66.4 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect

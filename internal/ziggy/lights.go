@@ -51,6 +51,7 @@ func (c *Bridge) Run(e *zerolog.Event, level zerolog.Level, msg string) {
 	if level == zerolog.DebugLevel || level == zerolog.TraceLevel {
 		e.Str("caller", c.ID)
 	}
+	e.Msgf(msg)
 }
 
 func (c *Bridge) Log() *zerolog.Logger {
@@ -63,8 +64,7 @@ type HueLight struct {
 }
 
 func (hl *HueLight) Scene(s string) error {
-	hl.Scene(s)
-	return nil
+	return hl.Scene(s)
 }
 
 func (hl *HueLight) Log() *zerolog.Logger {
