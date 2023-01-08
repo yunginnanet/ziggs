@@ -1,12 +1,14 @@
 package data
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"sync"
 
 	"git.tcp.direct/kayos/common/entropy"
+	"git.tcp.direct/kayos/common/squish"
+	"github.com/davecgh/go-spew/spew"
+	"github.com/gliderlabs/ssh"
 	"github.com/rs/zerolog/log"
 )
 
@@ -31,9 +33,13 @@ func AuthMethodFromMap(m map[string]string) AuthMethod {
 			Password: m["password"],
 		}
 	case "publickey":
+		pkParsed, err := ssh.ParsePublicKey(squish.B64d(m["pubkey"]))
+		if err != nil {
+			return nil
+		}
 		return &PubKey{
 			Username: m["pub_username"],
-			Pub:      []byte(m["pubkey"]),
+			Pub:      pkParsed,
 		}
 	}
 	return nil
@@ -107,8 +113,15 @@ func (up *UserPass) Authenticate() error {
 }
 
 type PubKey struct {
-	Username string `json:"pub_username"`
-	Pub      []byte `json:"pubkey"`
+	Username string        `json:"pub_username"`
+	Pub      ssh.PublicKey `json:"pubkey"`
+}
+
+func NewPubKey(username string, pubkey ssh.PublicKey) *PubKey {
+	return &PubKey{
+		Username: username,
+		Pub:      pubkey,
+	}
 }
 
 func (pk *PubKey) Name() string {
@@ -119,7 +132,7 @@ func (pk *PubKey) Map() map[string]string {
 	return map[string]string{
 		"type":         "publickey",
 		"pub_username": pk.Username,
-		"pubkey":       string(pk.Pub),
+		"pubkey":       squish.B64e(pk.Pub.Marshal()),
 	}
 }
 
@@ -137,7 +150,22 @@ func (pk *PubKey) Authenticate() error {
 	for _, method := range user.AuthMethods {
 		switch method["type"] {
 		case "publickey":
-			if method["pub_username"] == pk.Username && bytes.Equal([]byte(method["pubkey"]), pk.Pub) {
+			if method["pub_username"] != pk.Username {
+				log.Warn().Str("username", pk.Username).Msg("username mismatch")
+				continue
+			}
+			pkdat, ok := method["pubkey"]
+			if !ok {
+				log.Warn().Str("username", pk.Username).Msg("pubkey not found")
+				continue
+			}
+			pubkeyParsed, err := ssh.ParsePublicKey(squish.B64d(pkdat))
+			if err != nil {
+				log.Warn().Err(err).Str("username", pk.Username).Msg("error parsing public key")
+				spew.Dump(method)
+				continue
+			}
+			if ssh.KeysEqual(pubkeyParsed, pk.Pub) {
 				return nil
 			}
 		default:
@@ -187,7 +215,7 @@ func NewUser(username string, authMethods ...AuthMethod) (*User, error) {
 			if len(usableMethod.Username) == 0 {
 				return nil, errors.New("username cannot be empty")
 			}
-			if len(usableMethod.Pub) == 0 {
+			if len(usableMethod.Pub.Marshal()) == 0 {
 				return nil, errors.New("public key cannot be empty")
 			}
 			methods = append(methods, method.Map())
@@ -226,16 +254,19 @@ func DelUser(username string) error {
 	return db.With("users").Delete([]byte(username))
 }
 
-func (user *User) DelPubKey(pubkey []byte) (*User, error) {
+func (user *User) DelPubKey(pubkey ssh.PublicKey) (*User, error) {
 	user.Lock()
 	defer user.Unlock()
 	var found = false
 	var methods []map[string]string
 	for _, method := range user.AuthMethods {
 		m := AuthMethodFromMap(method)
+		if m == nil {
+			continue
+		}
 		if m.Name() == "publickey" {
 			pubKey := m.(*PubKey)
-			if bytes.Equal(pubKey.Pub, pubkey) {
+			if ssh.KeysEqual(pubKey.Pub, pubkey) {
 				found = true
 				continue
 			}
@@ -260,6 +291,9 @@ func (user *User) ChangePassword(newPassword string) (*User, error) {
 	var methods []map[string]string
 	for _, method := range user.AuthMethods {
 		m := AuthMethodFromMap(method)
+		if m == nil {
+			continue
+		}
 		if m.Name() == "password" {
 			ponce.Do(func() {
 				hashed, err := HashPassword(newPassword)
