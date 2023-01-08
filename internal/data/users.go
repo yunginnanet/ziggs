@@ -84,6 +84,9 @@ func NewUserPass(hashIt bool, username, password string) *UserPass {
 }
 
 func (up *UserPass) Authenticate() error {
+	if up.Username == "" {
+		return errors.New("username cannot be empty")
+	}
 	user, err := GetUser(up.Username)
 	if err != nil {
 		log.Warn().Err(err).Str("username", up.Username).Msg("error getting user")

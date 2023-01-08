@@ -63,6 +63,11 @@ func Start() {
 	startDB()
 }
 
+func StartTest() {
+	testMode()
+	Start()
+}
+
 func Close() {
 	if err := db.SyncAndCloseAll(); err != nil {
 		log.Warn().Err(err).Msg("error syncing and closing db")

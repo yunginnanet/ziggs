@@ -104,11 +104,11 @@ func setDefaults() {
 	}
 
 	Opt["http"] = map[string]interface{}{
-		"bind_addr": "127.0.0.1:9090",
+		"listen": "127.0.0.1:9090",
 	}
 
 	Opt["ssh"] = map[string]interface{}{
-		"bind_addr":    "127.0.0.1:2222",
+		"listen":       "127.0.0.1:2222",
 		"host_key_dir": "~/.config/" + common.Title + "/.ssh",
 	}
 
@@ -188,7 +188,7 @@ func argParse() {
 func processOpts() {
 	// string options and their exported variables
 	stringOpt := map[string]*string{
-		"http.bind_addr":   &HTTPBind,
+		"http.listen":      &HTTPBind,
 		"logger.directory": &LogDir,
 		"http.api_key":     &APIKey,
 		"ssh.listen":       &SSHListen,
