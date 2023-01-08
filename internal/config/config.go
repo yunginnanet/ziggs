@@ -56,7 +56,7 @@ func Init() {
 	argParse()
 
 	if customconfig {
-		associateExportedVariables()
+		processOpts()
 		return
 	}
 
@@ -75,7 +75,7 @@ func Init() {
 		Filename = Snek.ConfigFileUsed()
 	}
 
-	associateExportedVariables()
+	processOpts()
 }
 
 func setDefaults() {
@@ -231,8 +231,4 @@ func processOpts() {
 		zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	}
 
-}
-
-func associateExportedVariables() {
-	processOpts()
 }

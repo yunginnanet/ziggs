@@ -1,6 +1,7 @@
 package sshui
 
 import (
+	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
@@ -19,4 +20,15 @@ func encodePrivateKeyToPEM(privateKey *rsa.PrivateKey) []byte {
 	}
 
 	return pem.EncodeToMemory(&privBlock)
+}
+
+func generatePrivateKey() (*rsa.PrivateKey, error) {
+	privateKey, err := rsa.GenerateKey(rand.Reader, 4096)
+	if err != nil {
+		return nil, err
+	}
+	if err = privateKey.Validate(); err != nil {
+		return nil, err
+	}
+	return privateKey, nil
 }

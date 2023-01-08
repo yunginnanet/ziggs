@@ -1,8 +1,6 @@
 package sshui
 
 import (
-	"crypto/rand"
-	"crypto/rsa"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -14,11 +12,8 @@ import (
 )
 
 func newHostKey() error {
-	privateKey, err := rsa.GenerateKey(rand.Reader, 4096)
+	privateKey, err := generatePrivateKey()
 	if err != nil {
-		return err
-	}
-	if err = privateKey.Validate(); err != nil {
 		return err
 	}
 	dir, _ := filepath.Split(config.Filename)
