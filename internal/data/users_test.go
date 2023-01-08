@@ -14,90 +14,106 @@ func TestUsers(t *testing.T) {
 		}
 	})
 	t.Run("NewUser", func(t *testing.T) {
-		if err := NewUser("test"); err == nil {
+		if _, err := NewUser("test1"); err == nil {
 			t.Fatal("expected error creating user with no auth method")
 		}
-		if _, err := GetUser("test"); err == nil {
+		if _, err := GetUser("test1"); err == nil {
 			t.Fatal("expected error getting user with no auth method")
 		}
-		if err := NewUser("test", NewUserPass("test", "test")); err != nil {
+		if _, err := NewUser("test1", NewUserPass(true, "test", "test")); err != nil {
 			t.Fatal(err)
 		}
-		tu, err := GetUser("test")
+		tu, err := GetUser("test1")
 		if err != nil {
 			t.Fatal(err)
 		}
-		if len(tu.authMethods) != 1 {
-			t.Fatalf("expected 1 auth method, got %d", len(tu.authMethods))
+		if len(tu.AuthMethods) != 1 {
+			t.Fatalf("expected 1 auth method, got %d", len(tu.AuthMethods))
 		}
-		if tu.authMethods[0].Name() != "password" {
-			t.Fatalf("expected auth method to be 'password', got '%s'", tu.authMethods[0].Name())
+		if tu.AuthMethods[0]["type"] != "password" {
+			t.Fatalf("expected auth method to be 'password', got '%s'", tu.AuthMethods[0]["type"])
 		}
-		if tu.Username != "test" {
+		if tu.Username != "test1" {
 			t.Fatalf("expected username to be 'test', got '%s'", tu.Username)
 		}
 	})
 	t.Run("AddAuthMethod", func(t *testing.T) {
-		user, err := GetUser("test")
+		user, err := NewUser("test2", NewUserPass(true, "test2", "test2"))
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err = user.AddAuthMethod(nil); err == nil {
+		if user, err = user.AddAuthMethod(nil); err == nil {
 			t.Fatal("expected error adding nil auth method")
 		}
-		if err = user.AddAuthMethod(&PubKey{Username: "test", Pub: []byte("test")}); err != nil {
+		if user == nil {
+			t.Fatal("expected user to not be nil")
+		}
+		if user, err = user.AddAuthMethod(&PubKey{Username: "test2", Pub: []byte("pub")}); err != nil {
 			t.Fatal(err)
 		}
-		if len(user.authMethods) != 2 {
-			t.Fatalf("expected 2 auth methods, got %d", len(user.authMethods))
+		if len(user.AuthMethods) != 2 {
+			t.Fatalf("expected 2 auth methods, got %d", len(user.AuthMethods))
 		}
-		if user.authMethods[0].Name() != "password" {
-			t.Fatalf("expected auth method to be 'password', got '%s'", user.authMethods[0].Name())
+		pk := &PubKey{Username: "test2", Pub: []byte("pub")}
+		if err = pk.Authenticate(); err != nil {
+			t.Fatal("expected pub key to authenticate")
 		}
-		if user.authMethods[1].Name() != "publickey" {
-			t.Fatalf("expected auth method to be 'publickey', got '%s'", user.authMethods[1].Name())
+		if user, err = user.AddAuthMethod(&PubKey{Username: "test2", Pub: []byte("pub2")}); err != nil {
+			t.Fatal(err)
+		}
+		if len(user.AuthMethods) != 3 {
+			t.Fatalf("expected 2 auth methods, got %d", len(user.AuthMethods))
+		}
+		if user.AuthMethods[0]["type"] != "password" {
+			t.Fatalf("expected auth method to be 'password', got '%s'", user.AuthMethods[0]["type"])
+		}
+		if user.AuthMethods[1]["type"] != "publickey" {
+			t.Fatalf("expected auth method to be 'publickey', got '%s'", user.AuthMethods[1]["type"])
 		}
 		auth := &PubKey{
-			Username: "test",
-			Pub:      []byte("test"),
+			Username: "test2",
+			Pub:      []byte("pub"),
 		}
 		if err = auth.Authenticate(); err != nil {
 			t.Fatalf("expected auth to succeed, got: %v", err)
 		}
-		auth.Pub = []byte("test2")
+		auth.Pub = []byte("asdjfas")
 		if err = auth.Authenticate(); err == nil {
 			t.Fatal("expected auth to fail")
 		}
 	})
 	t.Run("DelPubKey", func(t *testing.T) {
-		user, err := GetUser("test")
+		user, err := GetUser("test2")
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err = user.DelPubKey([]byte("test2")); err == nil {
+		if user, err = user.DelPubKey([]byte("fdsafdas")); err == nil {
 			t.Fatal("expected error deleting non-existent key")
 		}
-		if err = user.DelPubKey([]byte("test")); err != nil {
+		if user == nil {
+			t.Fatal("expected user to not be nil")
+		}
+		if user, err = user.DelPubKey([]byte("pub2")); err != nil {
 			t.Fatal(err)
 		}
-		auth := NewUserPass("test", "test")
-		if err := auth.Authenticate(); err != nil {
+		auth := NewUserPass(false, "test2", "test2")
+		if err = auth.Authenticate(); err != nil {
 			t.Fatalf("expected userpass to still be there after deleting public key, got: %v", err)
 		}
 	})
 	t.Run("ChangePassword", func(t *testing.T) {
-		user, err := GetUser("test")
+		user, err := GetUser("test2")
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err = user.ChangePassword("test2"); err != nil {
+		if user, err = user.ChangePassword("test5"); err != nil {
 			t.Fatal(err)
 		}
-		auth := NewUserPass("test", "test")
+		auth := NewUserPass(false, "test2", "test2")
 		if err = auth.Authenticate(); err == nil {
 			t.Fatal("expected auth to fail using old password")
 		}
-		auth = NewUserPass("test", "test2")
+		auth = NewUserPass(false, "test2", "test5")
 		if err = auth.Authenticate(); err != nil {
 			t.Fatalf("expected auth to succeed using new password, got: %v", err)
 		}
