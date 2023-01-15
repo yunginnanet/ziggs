@@ -25,11 +25,18 @@ var (
 	extraDebug = false
 )
 
+var noHist = map[string]bool{"clear": true, "exit": true, "quit": true}
+
 // Interpret is where we will actuall define our Commands
 func executor(cmd string) {
 	defer func() {
-		history = append(history, cmd)
-		saveHist()
+		if r := recover(); r != nil {
+			log.Error().Msgf("PANIC: %s", r)
+		}
+		if _, ok := noHist[cmd]; !ok {
+			history = append(history, cmd)
+			go saveHist()
+		}
 	}()
 	cmd = strings.TrimSpace(cmd)
 	var args = strings.Fields(cmd)
@@ -163,7 +170,9 @@ func getHist() []string {
 		rb, _ := os.OpenFile(filepath.Join(pth, ".ziggs_history"), os.O_RDONLY, 0644)
 		xerox := bufio.NewScanner(rb)
 		for xerox.Scan() {
-			history = append(history, xerox.Text())
+			if strings.TrimSpace(xerox.Text()) != "" {
+				history = append(history, xerox.Text())
+			}
 		}
 		histLoaded = true
 	}
