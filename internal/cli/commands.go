@@ -289,6 +289,21 @@ func cmdDump(br *ziggy.Bridge, args []string) error {
 		return errors.New("not implemented")
 	case "rule":
 		return errors.New("not implemented")
+	case "rules":
+		target, err = br.GetRules()
+		if err != nil {
+			return err
+		}
+	case "scenes":
+		target, err = br.GetScenes()
+		if err != nil {
+			return err
+		}
+	case "schedules":
+		target, err = br.GetSchedules()
+		if err != nil {
+			return err
+		}
 	case "sensor":
 		return errors.New("not implemented")
 	case "bridge", "all":
@@ -374,11 +389,35 @@ func cmdLoad(br *ziggy.Bridge, args []string) error {
 		}
 		log.Info().Msgf("%v", resp)
 	case "schedule":
-		return errors.New("not implemented")
+		var sched *huego.Schedule
+		if err = json.Unmarshal(js, &sched); err != nil {
+			return err
+		}
+		var resp *huego.Response
+		if resp, err = br.CreateSchedule(sched); err != nil {
+			return err
+		}
+		log.Info().Msgf("%v", resp.Success)
 	case "rule":
-		return errors.New("not implemented")
+		var rule *huego.Rule
+		if err = json.Unmarshal(js, &rule); err != nil {
+			return err
+		}
+		var resp *huego.Response
+		if resp, err = br.CreateRule(rule); err != nil {
+			return err
+		}
+		log.Info().Msgf("%v", resp.Success)
 	case "sensor":
-		return errors.New("not implemented")
+		var sensor *huego.Sensor
+		if err = json.Unmarshal(js, &sensor); err != nil {
+			return err
+		}
+		var resp *huego.Response
+		if resp, err = br.CreateSensor(sensor); err != nil {
+			return err
+		}
+		log.Info().Msgf("%v", resp.Success)
 	case "bridge":
 		return errors.New("not implemented")
 	default:
