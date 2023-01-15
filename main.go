@@ -39,7 +39,12 @@ func init() {
 	config.Init()
 	log = config.StartLogger()
 	log.Trace().Msg("Logger started")
-	log.Info().Str("version", Version).Str("compileTime", compileTime).Send()
+	index := len(Version)
+	if len(Version) > 18 {
+		index = 18
+	}
+	log.Info().Str("version", Version[:index]).Send()
+	log.Info().Str("built", compileTime).Send()
 	if len(os.Args) < 1 {
 		return
 	}
