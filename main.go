@@ -3,16 +3,19 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
+	"strings"
 	"time"
 
+	"git.tcp.direct/kayos/common/squish"
 	"github.com/amimof/huego"
 	"github.com/manifoldco/promptui"
 	"github.com/rs/zerolog"
 
 	"git.tcp.direct/kayos/ziggs/internal/cli"
 	"git.tcp.direct/kayos/ziggs/internal/common"
-	config2 "git.tcp.direct/kayos/ziggs/internal/config"
+	"git.tcp.direct/kayos/ziggs/internal/config"
 	"git.tcp.direct/kayos/ziggs/internal/data"
 	"git.tcp.direct/kayos/ziggs/internal/ziggy"
 )
@@ -21,10 +24,22 @@ var (
 	log *zerolog.Logger
 )
 
+const banner = "H4sIAAAAAAACA+OSjjY2tjYxyH00pefRlAYwmiAdbZALwgookmtwyjRQLmOQyyUdbYnukhmoeg2NwSyYsiagoDmIqYCkDFkSQ8caShROwe5oqGaYPHZXg2W34JZqoIYU0DkA2WCqGc8BAAA="
+
 func init() {
-	config2.Init()
-	log = config2.StartLogger()
-	log.Info().Msg("Logger started")
+	bnr, _ := squish.UnpackStr(banner)
+	_, _ = io.Copy(os.Stdout, strings.NewReader(bnr))
+	compileTime, Version := common.Version()
+	if Version == "" {
+		Version = "DEVEL"
+	}
+	if compileTime == "" {
+		compileTime = time.Now().Format(time.RFC3339)
+	}
+	config.Init()
+	log = config.StartLogger()
+	log.Trace().Msg("Logger started")
+	log.Info().Str("version", Version).Str("compileTime", compileTime).Send()
 	if len(os.Args) < 1 {
 		return
 	}

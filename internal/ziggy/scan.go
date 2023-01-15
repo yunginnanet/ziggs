@@ -80,7 +80,7 @@ func enumerateBridge(a net.Addr, ctx context.Context) interface{} {
 		log.Warn().Err(err).Msg("failed to read response")
 		return nil
 	}
-	if !strings.Contains(string(ret), "Philips hue") || !strings.Contains(string(ret), "bridgeid") {
+	if !strings.Contains(string(ret), "factorynew") || !strings.Contains(string(ret), "bridgeid") {
 		log.Debug().Msgf("%s does not appear to be a hue bridge", a.String())
 		return nil
 	}

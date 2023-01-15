@@ -93,6 +93,7 @@ func executor(cmd string) {
 		}
 		bcmd, ok := Commands[args[0]]
 		if !ok {
+			log.Error().Msg("invalid command: " + args[0])
 			return
 		}
 		br, ok := ziggy.Lucifer.Bridges[sel.Bridge]

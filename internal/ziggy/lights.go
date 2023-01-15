@@ -127,7 +127,7 @@ func GetControllers(bridges []config.KnownBridge) (br []*Bridge) {
 			log.Error().Str("caller", lightConfig.Hostname).Err(err).Msg("unsuccessful connection")
 			continue
 		}
-		c.Log().Info().Msg("successful connection")
+		c.Log().Info().Str("caller", strings.Split(lightConfig.Hostname, "http://")[1]).Msg("connected")
 		br = append(br, c)
 	}
 	return
