@@ -1,8 +1,10 @@
 package cli
 
 import (
+	"bufio"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -25,6 +27,10 @@ var (
 
 // Interpret is where we will actuall define our Commands
 func executor(cmd string) {
+	defer func() {
+		history = append(history, cmd)
+		saveHist()
+	}()
 	cmd = strings.TrimSpace(cmd)
 	var args = strings.Fields(cmd)
 	if len(args) == 0 {
@@ -146,8 +152,27 @@ loop:
 
 const bulb = ``
 
+var (
+	history    []string
+	histLoaded bool
+)
+
 func getHist() []string {
-	return []string{}
+	if !histLoaded {
+		pth, _ := filepath.Split(config.Filename)
+		rb, _ := os.OpenFile(filepath.Join(pth, ".ziggs_history"), os.O_RDONLY, 0644)
+		xerox := bufio.NewScanner(rb)
+		for xerox.Scan() {
+			history = append(history, xerox.Text())
+		}
+		histLoaded = true
+	}
+	return history
+}
+
+func saveHist() {
+	pth, _ := filepath.Split(config.Filename)
+	_ = os.WriteFile(filepath.Join(pth, ".ziggs_history"), []byte(strings.Join(history, "\n")), 0644)
 }
 
 func StartCLI() {
@@ -176,7 +201,7 @@ func StartCLI() {
 				return fmt.Sprintf("ziggs[%s] %s ", sel.String(), bulb), true
 			}),
 		cli.OptionTitle("ziggs"),
-		cli.OptionCompletionOnDown(),
+		// cli.OptionCompletionOnDown(),
 	)
 
 	prompt.Run()

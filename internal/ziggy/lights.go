@@ -51,7 +51,7 @@ func (c *Bridge) Run(e *zerolog.Event, level zerolog.Level, msg string) {
 	if level == zerolog.DebugLevel || level == zerolog.TraceLevel {
 		e.Str("caller", c.ID)
 	}
-	e.Msgf(msg)
+	// e.Msgf(msg)
 }
 
 func (c *Bridge) Log() *zerolog.Logger {
