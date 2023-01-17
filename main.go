@@ -24,7 +24,7 @@ var (
 	log *zerolog.Logger
 )
 
-const banner = "H4sIAAAAAAACA+OSjjY2tjYxyH00pefRlAYwmiAdbZALwgookmtwyjRQLmOQyyUdbYnukhmoeg2NwSyYsiagoDmIqYCkDFkSQ8caShROwe5oqGaYPHZXg2W34JZqoIYU0DkA2WCqGc8BAAA="
+const banner = "H4sIAAAAAAACA5OONja2NjHIfTSl59GUBjCaIB1tkAvCCtLIkmtwyjRQLmOQyyUdbYnukhmoeg2NwSyYsiagoDmIqYCkDFkSQ8caShROwe5oqGaYPHZXg2W34JZqoIYU0DkAuowN3c4BAAA="
 
 func init() {
 	bnr, _ := squish.UnpackStr(banner)
