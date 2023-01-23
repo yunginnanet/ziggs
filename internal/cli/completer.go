@@ -82,6 +82,7 @@ func init() {
 	Commands["dump"] = newZiggsCommand(cmdDump, "dump target object JSON to a file", 1)
 	Commands["load"] = newZiggsCommand(cmdLoad, "load JSON from a file into the bridge", 1)
 	Commands["set"] = newZiggsCommand(cmdSet, "update object properties in bridge", 3)
+	Commands["get"] = newZiggsCommand(cmdGet, "get object properties from bridge", 2)
 	Commands["upgrade"] = newZiggsCommand(cmdFirmwareUpdate, "inform bridge to check for updates", 0,
 		"fwup", "upgrade", "fwupdate")
 	Commands["info"] = newZiggsCommand(cmdInfo, "show information about a bridge", 0, "uname")
@@ -136,8 +137,10 @@ func initCompletion() {
 	}
 	for _, sug := range suggestions[1] {
 		sug.requires = map[int]map[string]bool{1: {
-			"delete": true, "del": true, "set": true, "s": true, "rename": true, "mv": true, "dump": true, "load": true},
-		}
+			"delete": true, "del": true, "set": true, "s": true,
+			"rename": true, "mv": true, "dump": true, "load": true,
+			"get": true,
+		}}
 		sug.root = false
 	}
 	delCompletion := []*completion{
