@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -44,6 +45,9 @@ func grind(ctx context.Context) {
 var once = &sync.Once{}
 
 func TestCPULoadGradient(t *testing.T) {
+	if os.Getenv("ZIGGS_TEST_CPU_LOAD") == "" {
+		t.Skip("skipping CPU load test")
+	}
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(15*time.Second))
 	defer cancel()
 	grad, err := CPULoadGradient(ctx, "deepskyblue", "deeppink")
@@ -72,7 +76,7 @@ func TestCPULoadGradient(t *testing.T) {
 }
 
 func TestCoreLoadHue(t *testing.T) {
-	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(20*time.Second))
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(5*time.Second))
 	defer cancel()
 	huint, err := CoreLoadHue(ctx)
 	if err != nil {

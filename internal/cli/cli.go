@@ -29,11 +29,12 @@ var noHist = map[string]bool{"clear": true, "exit": true, "quit": true}
 
 // Interpret is where we will actuall define our Commands
 func executor(cmd string) {
+	var status = 0
 	defer func() {
 		if r := recover(); r != nil {
 			log.Error().Msgf("PANIC: %s", r)
 		}
-		if _, ok := noHist[cmd]; !ok {
+		if _, ok := noHist[cmd]; !ok && status == 0 {
 			history = append(history, cmd)
 			go saveHist()
 		}
@@ -54,12 +55,15 @@ func executor(cmd string) {
 			println("use: use <bridge>")
 			return
 		}
-		if br, ok := ziggy.Lucifer.Bridges[args[1]]; !ok {
-			println("invalid bridge: " + args[1])
-		} else {
-			sel.Bridge = args[1]
-			log.Info().Str("host", br.Host).Int("lights", len(br.HueLights)).Msg("switched to bridge: " + sel.Bridge)
+		br, ok := ziggy.Lucifer.Bridges[args[1]]
+		if !ok {
+			log.Error().Msg("invalid bridge: " + args[1])
+			status = 1
+			return
 		}
+		sel.Bridge = args[1]
+		log.Info().Str("host", br.Host).Int("lights", len(br.HueLights)).Msg("switched to bridge: " + sel.Bridge)
+
 	case "debug":
 		levelsdebug := map[string]zerolog.Level{"info": zerolog.InfoLevel, "debug": zerolog.DebugLevel, "trace": zerolog.TraceLevel}
 		debuglevels := map[zerolog.Level]string{zerolog.InfoLevel: "info", zerolog.DebugLevel: "debug", zerolog.TraceLevel: "trace"}
@@ -94,6 +98,7 @@ func executor(cmd string) {
 		bcmd, ok := Commands[args[0]]
 		if !ok {
 			log.Error().Msg("invalid command: " + args[0])
+			status = 1
 			return
 		}
 		br, ok := ziggy.Lucifer.Bridges[sel.Bridge]
@@ -115,11 +120,13 @@ func executor(cmd string) {
 					}
 				}(br)
 			}
-		} else {
-			err := bcmd.reactor(br, args[1:])
-			if err != nil {
-				log.Error().Err(err).Msg("error executing command")
-			}
+			return
+		}
+
+		err := bcmd.reactor(br, args[1:])
+		if err != nil {
+			log.Error().Err(err).Msg("error executing command")
+			status = 1
 		}
 	}
 }
@@ -165,17 +172,29 @@ var (
 	histLoaded bool
 )
 
+func loadHist() {
+	var histMap = make(map[string]bool)
+	pth, _ := filepath.Split(config.Filename)
+	rb, _ := os.OpenFile(filepath.Join(pth, ".ziggs_history"), os.O_RDONLY, 0644)
+	xerox := bufio.NewScanner(rb)
+	for xerox.Scan() {
+		_, ok := histMap[strings.TrimSpace(xerox.Text())]
+		switch {
+		case strings.TrimSpace(xerox.Text()) == "":
+			continue
+		case ok:
+			continue
+		default:
+			histMap[strings.TrimSpace(xerox.Text())] = true
+			history = append(history, xerox.Text())
+		}
+	}
+	histLoaded = true
+}
+
 func getHist() []string {
 	if !histLoaded {
-		pth, _ := filepath.Split(config.Filename)
-		rb, _ := os.OpenFile(filepath.Join(pth, ".ziggs_history"), os.O_RDONLY, 0644)
-		xerox := bufio.NewScanner(rb)
-		for xerox.Scan() {
-			if strings.TrimSpace(xerox.Text()) != "" {
-				history = append(history, xerox.Text())
-			}
-		}
-		histLoaded = true
+		loadHist()
 	}
 	return history
 }

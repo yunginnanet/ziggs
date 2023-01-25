@@ -143,7 +143,7 @@ func cmdSet(bridge *ziggy.Bridge, args []string) error {
 				return errors.New("not enough arguments")
 			}
 			argHead++
-			newHue, numErr := strconv.Atoi(args[argHead])
+			newHue, numErr := strconv.Atoi(strings.TrimSpace(args[argHead]))
 			if numErr != nil || newHue > 65535 || newHue < 0 {
 				return fmt.Errorf("given hue is not a valid number: %w", numErr)
 			}
@@ -159,9 +159,9 @@ func cmdSet(bridge *ziggy.Bridge, args []string) error {
 				return errors.New("not enough arguments")
 			}
 			argHead++
-			newSat, numErr := strconv.Atoi(args[argHead])
-			if numErr != nil || newSat > 255 || newSat < 0 {
-				return fmt.Errorf("given saturation is not a valid number: %w", numErr)
+			newSat, numErr := strconv.Atoi(strings.TrimSpace(args[argHead]))
+			if numErr != nil {
+				return fmt.Errorf("given saturation is not a valid number: %v", numErr)
 			}
 			actions = append(actions, func() error {
 				err := target.Sat(uint8(newSat))
@@ -175,7 +175,7 @@ func cmdSet(bridge *ziggy.Bridge, args []string) error {
 				return errors.New("not enough arguments")
 			}
 			argHead++
-			newTemp, numErr := strconv.Atoi(args[argHead])
+			newTemp, numErr := strconv.Atoi(strings.TrimSpace(args[argHead]))
 			if numErr != nil || newTemp > 500 || newTemp < 153 {
 				terr := fmt.Errorf("given temperature is not a valid number: %w", numErr)
 				if numErr == nil {
@@ -214,7 +214,7 @@ func cmdSet(bridge *ziggy.Bridge, args []string) error {
 			if argHead > len(args)-1 {
 				return errors.New("not enough arguments")
 			}
-			targetScene := args[argHead]
+			targetScene := strings.TrimSpace(args[argHead])
 			actions = append(actions, func() error {
 				err := target.Scene(targetScene)
 				if err != nil {
