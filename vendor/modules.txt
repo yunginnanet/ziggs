@@ -58,6 +58,9 @@ github.com/gliderlabs/ssh
 # github.com/gofrs/flock v0.8.0
 ## explicit
 github.com/gofrs/flock
+# github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
+## explicit; go 1.13
+github.com/google/shlex
 # github.com/hashicorp/errwrap v1.0.0
 ## explicit
 github.com/hashicorp/errwrap

@@ -10,6 +10,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1
 	github.com/dhamith93/systats v0.2.0
 	github.com/gliderlabs/ssh v0.3.5
+	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
 	github.com/lucasb-eyer/go-colorful v1.2.0
 	github.com/manifoldco/promptui v0.9.0
 	github.com/mazznoer/colorgrad v0.9.0

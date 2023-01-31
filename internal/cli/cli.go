@@ -14,6 +14,8 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 
+	"github.com/google/shlex"
+
 	"git.tcp.direct/kayos/ziggs/internal/common"
 	"git.tcp.direct/kayos/ziggs/internal/config"
 	"git.tcp.direct/kayos/ziggs/internal/ziggy"
@@ -39,8 +41,12 @@ func executor(cmd string) {
 			go saveHist()
 		}
 	}()
-	cmd = strings.TrimSpace(cmd)
-	var args = strings.Fields(cmd)
+	args, err := shlex.Split(strings.TrimSpace(cmd))
+	if err != nil {
+		log.Error().Msgf("error parsing command: %s", err)
+		status = 1
+		return
+	}
 	if len(args) == 0 {
 		return
 	}

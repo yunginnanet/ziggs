@@ -55,3 +55,27 @@ func GetGroupMap() map[string]*huego.Group {
 	}
 	return groupMap
 }
+
+func GetSceneMap() map[string]*huego.Scene {
+	var sceneMap = make(map[string]*huego.Scene)
+	for _, c := range Lucifer.Bridges {
+		scs, err := c.GetScenes()
+		if err != nil {
+			log.Warn().Msgf("error getting groups on bridge %s: %v", c.ID, err)
+			continue
+		}
+		for _, s := range scs {
+			group, gerr := c.GetScene(s.ID)
+			if gerr != nil {
+				log.Warn().Msgf("failed to get pointer for scene %s on bridge %s: %v", s.Name, c.ID, gerr)
+				continue
+			}
+			if _, ok := sceneMap[s.Name]; ok {
+				log.Warn().Msgf("duplicate scene name %s on bridge %s - please rename", s.Name, c.ID)
+				continue
+			}
+			sceneMap[s.Name] = group
+		}
+	}
+	return sceneMap
+}

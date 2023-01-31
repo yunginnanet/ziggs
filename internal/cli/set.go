@@ -218,7 +218,11 @@ func cmdSet(bridge *ziggy.Bridge, args []string) error {
 			actions = append(actions, func() error {
 				err := target.Scene(targetScene)
 				if err != nil {
-					err = fmt.Errorf("failed to set scene: %w", err)
+					targetScene = ziggy.GetSceneMap()[targetScene].ID
+					err = target.Scene(targetScene)
+					if err != nil {
+						err = fmt.Errorf("failed to set scene: %w", err)
+					}
 				}
 				return err
 			})
