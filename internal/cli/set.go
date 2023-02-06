@@ -24,6 +24,7 @@ type cmdTarget interface {
 	SetState(huego.State) error
 	Alert(string) error
 	Scene(string) error
+	Effect(string) error
 }
 
 func cmdSet(bridge *ziggy.Bridge, args []string) error {
@@ -167,6 +168,19 @@ func cmdSet(bridge *ziggy.Bridge, args []string) error {
 				err := target.Sat(uint8(newSat))
 				if err != nil {
 					err = fmt.Errorf("failed to set saturation: %w", err)
+				}
+				return err
+			})
+		case "effect", "e":
+			if len(args) == argHead-1 {
+				return errors.New("not enough arguments")
+			}
+			argHead++
+			newEffect := strings.TrimSpace(args[argHead])
+			actions = append(actions, func() error {
+				err := target.Effect(newEffect)
+				if err != nil {
+					err = fmt.Errorf("failed to set effect: %w", err)
 				}
 				return err
 			})

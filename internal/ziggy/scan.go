@@ -6,6 +6,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/netip"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -13,9 +14,7 @@ import (
 
 	"github.com/amimof/huego"
 	tui "github.com/manifoldco/promptui"
-	"inet.af/netaddr"
-
-	"git.tcp.direct/kayos/common/network"
+	"go4.org/netipx"
 
 	"git.tcp.direct/kayos/ziggs/internal/common"
 )
@@ -52,7 +51,7 @@ addrIter:
 	return candidates
 }
 
-func enumerateBridge(a net.Addr, ctx context.Context) interface{} {
+func enumerateBridge(a netip.Addr, ctx context.Context) interface{} {
 	var err error
 	if _, err = net.DialTimeout("tcp", a.String()+":80", 2*time.Second); err != nil {
 		select {
@@ -112,8 +111,8 @@ func checkAddrs(ctx context.Context, addrs []net.Addr, working *int32, resChan c
 	log.Trace().Msg("checking addresses")
 	for _, a := range addrs {
 		log.Trace().Msgf("checking %s", a.String())
-		ips := network.IterateNetRange(netaddr.MustParseIPPrefix(a.String()))
-		for ipa := range ips {
+		rng := netipx.MustParseIPRange(a.String())
+		for ipa := rng.From(); ipa != rng.To(); ipa = ipa.Next() {
 			init.Do(func() { resChan <- &huego.Bridge{} })
 		ctxLoop:
 			for {
@@ -130,8 +129,8 @@ func checkAddrs(ctx context.Context, addrs []net.Addr, working *int32, resChan c
 			}
 			log.Trace().Msgf("checking %s", ipa.String())
 			atomic.AddInt32(working, 1)
-			go func(ip netaddr.IP) {
-				resChan <- enumerateBridge(ip.IPAddr(), ctx)
+			go func(ip netip.Addr) {
+				resChan <- enumerateBridge(ip, ctx)
 				time.Sleep(100 * time.Millisecond)
 				atomic.AddInt32(working, -1)
 			}(ipa)
