@@ -2,8 +2,11 @@ package cli
 
 import (
 	"strings"
+	"sync"
 
 	cli "git.tcp.direct/Mirrors/go-prompt"
+	"github.com/davecgh/go-spew/spew"
+	"github.com/google/shlex"
 )
 
 const (
@@ -16,51 +19,71 @@ type completion struct {
 	cli.Suggest
 	inner    *ziggsCommand
 	requires map[int]map[string]bool
+	callback func([]string) bool
 	isAlias  bool
 	root     bool
 }
 
 func (c completion) qualifies(line string) bool {
-	args := strings.Fields(line)
+	args, err := shlex.Split(line)
+	if err != nil {
+		log.Warn().Err(err).Msg("shlex.Split failed")
+		return false
+	}
 
-	if len(args) <= 1 && c.root {
+	verbose := func(msg string, args ...interface{}) {
+		if !extraDebug {
+			return
+		}
+		log.Trace().Caller(1).
+			Int("len(args)", len(args)).
+			Int("len(c.requires)", len(c.requires)).Msgf(msg, args...)
+	}
+
+	if extraDebug {
+		spew.Dump(args)
+	}
+
+	switch {
+	case len(args) <= 1 && c.root:
+		verbose("%v%s: len(args) <= 1 && c.root", grn, c.Text)
 		return true
-	}
-
-	if len(args) < len(c.requires) {
-		if extraDebug {
-			log.Trace().Int("len(args)", len(args)).Int("len(c.requires)", len(c.requires)).
-				Msg(red + "len(args) < len(c.requires)" + rst)
-		}
+	case len(args) < len(c.requires):
+		verbose(red + "len(args) < len(c.requires)" + rst)
 		return false
-	}
-	if len(args)-2 > len(c.requires) {
-		if extraDebug {
-			log.Trace().Int("len(args)-2", len(args)-2).Int("len(c.requires)", len(c.requires)).
-				Msg(red + "len(args)-2 > len(c.requires)" + rst)
-		}
+	case len(args)-2 > len(c.requires):
+		verbose(red + "len(args)-2 > len(c.requires)" + rst)
 		return false
+	default:
+		//
 	}
 
 	var count = 0
 	for i, a := range args {
 		i++
 		if _, ok := c.requires[i][a]; ok {
-			if extraDebug {
-				log.Trace().Msgf("%v%s: found %s%v", grn, c.Text, a, rst)
-			}
+			verbose("%v%s: found %s (count++) %v", grn, c.Text, a, rst)
 			count++
 		}
 	}
 
-	if extraDebug && !(count >= len(c.requires)) {
-		log.Trace().Msgf("%v%s: count(%d) < len(c.requires)(%d)", red, c.Text, count, len(c.requires))
+	ok := count >= len(c.requires)
+	if !ok {
+		verbose("%v%s: count(%d) < len(c.requires)(%d)", red, c.Text, count, len(c.requires))
+		return false
 	}
 
-	return count >= len(c.requires)
+	if c.callback == nil {
+		return true
+	}
+
+	return c.callback(args)
 }
 
-var suggestions map[int]map[string]*completion
+var (
+	suggestions     map[int]map[string]*completion
+	suggestionMutex = &sync.RWMutex{}
+)
 
 func init() {
 	Commands["ls"] = newZiggsCommand(cmdList, "list all lights, groups, scenes, rules, and schedules", 0)
@@ -91,10 +114,15 @@ func init() {
 }
 
 func initCompletion() {
+	suggestionMutex.Lock()
+	defer suggestionMutex.Unlock()
+
 	suggestions = make(map[int]map[string]*completion)
 	suggestions[0] = make(map[string]*completion)
 	suggestions[1] = make(map[string]*completion)
 	suggestions[2] = make(map[string]*completion)
+	suggestions[3] = make(map[string]*completion)
+	suggestions[4] = make(map[string]*completion)
 
 	/*	{Suggest: cli.Suggest{Text: "lights"}, inner: Commands["lights"]},
 		{Suggest: cli.Suggest{Text: "groups"}, inner: Commands["groups"]},
@@ -111,7 +139,6 @@ func initCompletion() {
 		{Suggest: cli.Suggest{Text: "dump"}, inner: Commands["dump"]},
 		{Suggest: cli.Suggest{Text: "load"}, inner: Commands["load"]},
 		{Suggest: cli.Suggest{Text: "use", Description: "select bridge to perform actions on"}},
-
 		{Suggest: cli.Suggest{Text: "exit", Description: "exit ziggs"}},
 	*/
 
@@ -156,15 +183,12 @@ func initCompletion() {
 }
 
 func completer(in cli.Document) []cli.Suggest {
-	c := in.CurrentLine()
+	c := in.Text
 
-	infields := strings.Fields(c)
+	infields, _ := shlex.Split(c)
 	var head = len(infields) - 1
 	if head < 0 {
 		head = 0
-	}
-	if head == 1 {
-		head = 1
 	}
 	if head > 0 && in.LastKeyStroke() == ' ' {
 		head++
@@ -174,11 +198,15 @@ func completer(in cli.Document) []cli.Suggest {
 		log.Trace().Int("head", head).Msgf("completing %v", infields)
 	}
 	var sugs []cli.Suggest
+	suggestionMutex.RLock()
+	defer suggestionMutex.RUnlock()
 	for _, sug := range suggestions[head] {
-		if sug.qualifies(c) {
-			if in.GetWordBeforeCursor() != "" && strings.HasPrefix(sug.Text, in.GetWordBeforeCursor()) {
-				sugs = append(sugs, sug.Suggest)
-			}
+		if !sug.qualifies(c) {
+			continue
+		}
+		if in.TextBeforeCursor() != "" && strings.Contains(strings.ToLower(sug.Text),
+			strings.ToLower(strings.TrimSpace(in.GetWordBeforeCursorWithSpace()))) {
+			sugs = append(sugs, sug.Suggest)
 		}
 	}
 	return sugs

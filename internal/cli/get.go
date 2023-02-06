@@ -21,7 +21,7 @@ func cmdGet(bridge *ziggy.Bridge, args []string) error {
 	}
 
 	var (
-		groupMap     map[string]*huego.Group
+		groupMap     map[string]*ziggy.HueGroup
 		lightMap     map[string]*ziggy.HueLight
 		currentState *huego.State
 		argHead      = -1

@@ -27,9 +27,11 @@ type cmdTarget interface {
 	Effect(string) error
 }
 
+var ErrNotEnoughArguments = errors.New("not enough arguments")
+
 func cmdSet(bridge *ziggy.Bridge, args []string) error {
 	if len(args) < 3 {
-		return errors.New("not enough arguments")
+		return ErrNotEnoughArguments
 	}
 
 	type (
@@ -37,7 +39,7 @@ func cmdSet(bridge *ziggy.Bridge, args []string) error {
 	)
 
 	var (
-		groupMap     map[string]*huego.Group
+		groupMap     map[string]*ziggy.HueGroup
 		lightMap     map[string]*ziggy.HueLight
 		actions      []action
 		currentState *huego.State
@@ -141,7 +143,7 @@ func cmdSet(bridge *ziggy.Bridge, args []string) error {
 			})
 		case "hue", "h":
 			if len(args) == argHead-1 {
-				return errors.New("not enough arguments")
+				return ErrNotEnoughArguments
 			}
 			argHead++
 			newHue, numErr := strconv.Atoi(strings.TrimSpace(args[argHead]))
@@ -157,7 +159,7 @@ func cmdSet(bridge *ziggy.Bridge, args []string) error {
 			})
 		case "saturation", "sat":
 			if len(args) == argHead-1 {
-				return errors.New("not enough arguments")
+				return ErrNotEnoughArguments
 			}
 			argHead++
 			newSat, numErr := strconv.Atoi(strings.TrimSpace(args[argHead]))
@@ -173,7 +175,7 @@ func cmdSet(bridge *ziggy.Bridge, args []string) error {
 			})
 		case "effect", "e":
 			if len(args) == argHead-1 {
-				return errors.New("not enough arguments")
+				return ErrNotEnoughArguments
 			}
 			argHead++
 			newEffect := strings.TrimSpace(args[argHead])
@@ -186,7 +188,7 @@ func cmdSet(bridge *ziggy.Bridge, args []string) error {
 			})
 		case "temperature", "temp":
 			if len(args) == argHead-1 {
-				return errors.New("not enough arguments")
+				return ErrNotEnoughArguments
 			}
 			argHead++
 			newTemp, numErr := strconv.Atoi(strings.TrimSpace(args[argHead]))
@@ -222,11 +224,11 @@ func cmdSet(bridge *ziggy.Bridge, args []string) error {
 			return nil
 		case "scene", "sc":
 			if len(args) == argHead-1 {
-				return errors.New("not enough arguments")
+				return ErrNotEnoughArguments
 			}
 			argHead++
 			if argHead > len(args)-1 {
-				return errors.New("not enough arguments")
+				return ErrNotEnoughArguments
 			}
 			targetScene := strings.TrimSpace(args[argHead])
 			actions = append(actions, func() error {
@@ -251,7 +253,7 @@ func cmdSet(bridge *ziggy.Bridge, args []string) error {
 	if target == nil {
 		return errors.New("no target specified")
 	}
-	tg, tgok := target.(*huego.Group)
+	tg, tgok := target.(*ziggy.HueGroup)
 	tl, tlok := target.(*ziggy.HueLight)
 	switch {
 	case tgok:

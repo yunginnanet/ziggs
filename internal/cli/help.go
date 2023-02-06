@@ -10,6 +10,9 @@ import (
 var tabber = tabwriter.NewWriter(os.Stdout, 0, 8, 1, '\t', tabwriter.AlignRight)
 
 func getHelp(target string) {
+	suggestionMutex.RLock()
+	defer suggestionMutex.RUnlock()
+
 	if target != "" && target != "meta" {
 		for _, su := range suggestions[0] {
 			if strings.Contains(strings.ToLower(su.Text), strings.ToLower(target)) {

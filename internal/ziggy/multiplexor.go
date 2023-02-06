@@ -1,6 +1,6 @@
 package ziggy
 
-import "github.com/amimof/huego"
+import "strconv"
 
 // Multiplex is all of the lights (all of the lights).
 // I'll see myself out.
@@ -32,8 +32,8 @@ func GetLightMap() map[string]*HueLight {
 	return lightMap
 }
 
-func GetGroupMap() map[string]*huego.Group {
-	var groupMap = make(map[string]*huego.Group)
+func GetGroupMap() map[string]*HueGroup {
+	var groupMap = make(map[string]*HueGroup)
 	for _, c := range Lucifer.Bridges {
 		gs, err := c.GetGroups()
 		if err != nil {
@@ -50,14 +50,16 @@ func GetGroupMap() map[string]*huego.Group {
 				log.Warn().Msgf("duplicate group name %s on bridge %s - please rename", g.Name, c.ID)
 				continue
 			}
-			groupMap[g.Name] = group
+			hg := &HueGroup{Group: group, controller: c}
+			groupMap[g.Name] = hg
+			groupMap[strconv.Itoa(g.ID)] = hg
 		}
 	}
 	return groupMap
 }
 
-func GetSceneMap() map[string]*huego.Scene {
-	var sceneMap = make(map[string]*huego.Scene)
+func GetSceneMap() map[string]*HueScene {
+	var sceneMap = make(map[string]*HueScene)
 	for _, c := range Lucifer.Bridges {
 		scs, err := c.GetScenes()
 		if err != nil {
@@ -70,11 +72,14 @@ func GetSceneMap() map[string]*huego.Scene {
 				log.Warn().Msgf("failed to get pointer for scene %s on bridge %s: %v", s.Name, c.ID, gerr)
 				continue
 			}
-			if _, ok := sceneMap[s.Name]; ok {
+			if _, ok := sceneMap[s.Name]; !ok {
+				sceneMap[s.Name] = &HueScene{Scene: group, controller: c}
+				continue
+			}
+			if _, ok := sceneMap[s.Name+"-2"]; ok {
 				log.Warn().Msgf("duplicate scene name %s on bridge %s - please rename", s.Name, c.ID)
 				continue
 			}
-			sceneMap[s.Name] = group
 		}
 	}
 	return sceneMap

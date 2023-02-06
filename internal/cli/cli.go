@@ -9,10 +9,9 @@ import (
 	"time"
 
 	cli "git.tcp.direct/Mirrors/go-prompt"
+	"github.com/davecgh/go-spew/spew"
 	tui "github.com/manifoldco/promptui"
 	"github.com/rs/zerolog"
-
-	"github.com/davecgh/go-spew/spew"
 
 	"github.com/google/shlex"
 
@@ -74,14 +73,26 @@ func executor(cmd string) {
 		levelsdebug := map[string]zerolog.Level{"info": zerolog.InfoLevel, "debug": zerolog.DebugLevel, "trace": zerolog.TraceLevel}
 		debuglevels := map[zerolog.Level]string{zerolog.InfoLevel: "info", zerolog.DebugLevel: "debug", zerolog.TraceLevel: "trace"}
 		if len(args) < 2 {
-			println("current debug level: " + debuglevels[log.GetLevel()])
+			log.Info().Msgf("current debug level: %s", debuglevels[log.GetLevel()])
 			return
 		}
 		if newlevel, ok := levelsdebug[args[1]]; ok {
 			zerolog.SetGlobalLevel(newlevel)
-		} else {
-			println("invalid argument: " + args[1])
+			return
 		}
+		if args[1] == "debugcli" || args[1] == "cli" {
+			if extraDebug {
+				extraDebug = false
+				log.Info().Msg("disabled cli debug")
+			} else {
+				extraDebug = true
+				log.Info().Msgf("dumping suggestions")
+				spew.Dump(suggestions)
+				log.Info().Msg("enabled cli debug")
+			}
+			return
+		}
+		return
 	case "help":
 		if len(args) < 2 {
 			getHelp("")
@@ -90,13 +101,6 @@ func executor(cmd string) {
 		getHelp(args[len(args)-1])
 	case "clear":
 		print("\033[H\033[2J")
-	case "debugcli":
-		if extraDebug {
-			extraDebug = false
-		} else {
-			extraDebug = true
-		}
-		spew.Dump(suggestions)
 	default:
 		if len(args) == 0 {
 			return
@@ -213,9 +217,12 @@ func saveHist() {
 func StartCLI() {
 	log = config.GetLogger()
 	processBridges()
-	grpmap := ziggy.GetGroupMap()
-	processGroups(grpmap)
-	processLights()
+	go func() {
+		processGroups(ziggy.GetGroupMap())
+		processLights(ziggy.GetLightMap())
+		processScenes(ziggy.GetSceneMap())
+	}()
+	buildTime, _ := common.Version()
 	prompt = cli.New(
 		executor,
 		completer,
@@ -235,8 +242,7 @@ func StartCLI() {
 				}
 				return fmt.Sprintf("ziggs[%s] %s ", sel.String(), bulb), true
 			}),
-		cli.OptionTitle("ziggs"),
-		// cli.OptionCompletionOnDown(),
+		cli.OptionTitle("ziggs - built "+buildTime),
 	)
 
 	prompt.Run()

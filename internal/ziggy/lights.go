@@ -63,6 +63,18 @@ type HueLight struct {
 	controller *Bridge
 }
 
+type HueGroup struct {
+	*huego.Group
+	scenes     map[string]*HueScene
+	controller *Bridge
+}
+
+type HueScene struct {
+	*huego.Scene
+	controller *Bridge
+	group      *HueGroup
+}
+
 func (hl *HueLight) Scene(s string) error {
 	return hl.Scene(s)
 }
