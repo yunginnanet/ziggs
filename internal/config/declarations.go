@@ -49,6 +49,8 @@ var (
 	SSHListen string
 	// SSHHostKey is the path to the SSH host key, if any. If none is specified, one will be generated.
 	SSHHostKey string
+	// SSHPublicKeys is a list of public keys that are allowed to connect to ziggs via SSH.
+	SSHPublicKeys []string
 )
 
 var (

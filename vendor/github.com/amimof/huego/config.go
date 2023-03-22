@@ -14,6 +14,7 @@ type Config struct {
 	ProxyPort        uint16               `json:"proxyport,omitempty"`
 	LinkButton       bool                 `json:"linkbutton,omitempty"`
 	IPAddress        string               `json:"ipaddress,omitempty"`
+	Reboot           bool                 `json:"reboot,omitempty"`
 	Mac              string               `json:"mac,omitempty"`
 	NetMask          string               `json:"netmask,omitempty"`
 	Gateway          string               `json:"gateway,omitempty"`
@@ -30,7 +31,6 @@ type Config struct {
 	DatastoreVersion string               `json:"datastoreversion,omitempty"`
 	StarterKitID     string               `json:"starterkitid,omitempty"`
 	InternetService  InternetService      `json:"internetservices,omitempty"`
-	Reboot           bool                 `json:"reboot,omitempty"`
 }
 
 // SwUpdate contains information related to software updates. Deprecated in 1.20

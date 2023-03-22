@@ -3,6 +3,7 @@ package cli
 import (
 	"bufio"
 	"fmt"
+	// "io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -33,14 +34,21 @@ func executor(cmd string) {
 	var status = 0
 	defer func() {
 		if r := recover(); r != nil {
-			log.Error().Msgf("PANIC: %s", r)
+			log.Error().Caller().Msgf("PANIC: %s", r)
 		}
 		if _, ok := noHist[cmd]; !ok && status == 0 {
 			history = append(history, cmd)
 			go saveHist()
 		}
 	}()
+
+	// hacky bugfix
+	cmd = strings.ReplaceAll(cmd, "#", "_POUNDSIGN_")
 	args, err := shlex.Split(strings.TrimSpace(cmd))
+	for i, arg := range args {
+		args[i] = strings.ReplaceAll(arg, "_POUNDSIGN_", "#")
+	}
+
 	if err != nil {
 		log.Error().Msgf("error parsing command: %s", err)
 		status = 1
@@ -214,6 +222,7 @@ func saveHist() {
 	_ = os.WriteFile(filepath.Join(pth, ".ziggs_history"), []byte(strings.Join(history, "\n")), 0644)
 }
 
+// func StartCLI(r io.Reader, w io.Writer) {
 func StartCLI() {
 	log = config.GetLogger()
 	processBridges()
@@ -223,9 +232,13 @@ func StartCLI() {
 		processScenes(ziggy.GetSceneMap())
 	}()
 	buildTime, _ := common.Version()
+
+	// cli.NewStdoutWriter().
 	prompt = cli.New(
 		executor,
 		completer,
+		//		cli.OptionWriter(w),
+		//		cli.Op(r),
 		// cli.OptionPrefixBackgroundColor(cli.Black),
 		cli.OptionPrefixTextColor(cli.Yellow),
 		cli.OptionHistory(getHist()),

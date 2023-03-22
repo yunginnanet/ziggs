@@ -129,6 +129,7 @@ func cmdSet(bridge *ziggy.Bridge, args []string) error {
 			if len(args) == argHead-1 {
 				return errors.New("not enough arguments")
 			}
+			log.Trace().Caller().Msgf("color, args: %v", args)
 			argHead++
 			newcolor, err := common.ParseHexColorFast(args[argHead])
 			if err != nil {

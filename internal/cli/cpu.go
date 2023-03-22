@@ -45,7 +45,7 @@ func cpuInit(argVal string, bridge *ziggy.Bridge, cpuTarget cmdTarget) error {
 		cpuOn = false
 	}()
 	var lights []*huego.Light
-	for _, l := range cpuTarget.(*huego.Group).Lights {
+	for _, l := range cpuTarget.(*ziggy.HueGroup).Lights {
 		lint, _ := strconv.Atoi(l)
 		lptr, err := bridge.GetLight(lint)
 		if err != nil {
