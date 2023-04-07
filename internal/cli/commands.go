@@ -284,7 +284,7 @@ func cmdDump(br *ziggy.Bridge, args []string) error {
 		if err != nil {
 			return err
 		}
-		name = target.(*huego.Group).Name
+		name = target.(*ziggy.HueGroup).Name
 	case "schedule":
 		return errors.New("not implemented")
 	case "rule":
@@ -373,7 +373,7 @@ func cmdLoad(br *ziggy.Bridge, args []string) error {
 		if err := json.Unmarshal(js, &g); err != nil {
 			return err
 		}
-		if resp, err := br.UpdateGroup(target.(*huego.Group).ID, *g); err != nil {
+		if resp, err := br.UpdateGroup(target.(*ziggy.HueGroup).ID, *g); err != nil {
 			return err
 		} else {
 			log.Info().Msgf("%v", resp)
