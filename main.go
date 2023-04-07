@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -17,6 +18,7 @@ import (
 	"git.tcp.direct/kayos/ziggs/internal/common"
 	"git.tcp.direct/kayos/ziggs/internal/config"
 	"git.tcp.direct/kayos/ziggs/internal/data"
+	"git.tcp.direct/kayos/ziggs/internal/haptic"
 	"git.tcp.direct/kayos/ziggs/internal/ziggy"
 )
 
@@ -26,7 +28,7 @@ var (
 
 const banner = "H4sIAAAAAAACA5OONja2NjHIfTSl59GUBjCaIB1tkAvCCtLIkmtwyjRQLmOQyyUdbYnukhmoeg2NwSyYsiagoDmIqYCkDFkSQ8caShROwe5oqGaYPHZXg2W34JZqoIYU0DkAuowN3c4BAAA="
 
-func init() {
+func aesthetic() {
 	bnr, _ := squish.UnpackStr(banner)
 	_, _ = io.Copy(os.Stdout, strings.NewReader(bnr))
 	compileTime, Version := common.Version()
@@ -36,18 +38,25 @@ func init() {
 	if compileTime == "" {
 		compileTime = time.Now().Format(time.RFC3339)
 	}
-	config.Init()
-	log = config.StartLogger()
-	log.Trace().Msg("Logger started")
+
 	index := len(Version)
 	if len(Version) > 18 {
 		index = 18
 	}
 	log.Info().Str("version", Version[:index]).Send()
 	log.Info().Str("built", compileTime).Send()
-	if len(os.Args) < 1 {
+}
+
+func init() {
+	config.Init()
+	log = config.StartLogger()
+	log.Trace().Msg("Logger started")
+
+	if len(os.Args) > 1 {
 		return
 	}
+
+	aesthetic()
 }
 
 func TurnAll(Known []*ziggy.Bridge, mode ziggy.ToggleMode) {
@@ -151,6 +160,23 @@ func main() {
 
 	for _, arg := range os.Args {
 		switch arg {
+		case "events":
+			evch := make(chan string, 10)
+			go func() {
+				log.Info().Msg("starting event client")
+				defer log.Warn().Msg("event client stopped")
+				for e := range evch {
+					println(e)
+				}
+			}()
+			evc := haptic.NewEventClient()
+			evc.Subscribe("*", evch)
+			if err = evc.Start(config.KnownBridges[0].Hostname, config.KnownBridges[0].Username); err != nil &&
+				!errors.Is(err, context.Canceled) && !errors.Is(err, io.EOF) {
+				log.Fatal().Err(err).Msg("failed to start event client")
+			}
+			close(evch)
+			return
 		case "discover":
 
 		case "on":

@@ -32,6 +32,10 @@ func (c *EventClient) Subscribe(event string, ch chan string) {
 }
 
 func (c *EventClient) Start(hueHost, hueKey string) error {
+	if strings.HasPrefix(hueHost, "http") {
+		hueHost = strings.Split(hueHost, "://")[1]
+		hueHost = strings.TrimSuffix(hueHost, "/")
+	}
 	req, err := http.NewRequest("GET", "https://"+hueHost+"/eventstream/clip/v2", nil)
 	if err != nil {
 		return err
