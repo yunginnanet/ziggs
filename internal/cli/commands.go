@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -321,12 +322,23 @@ func cmdDump(br *ziggy.Bridge, args []string) error {
 		return errors.New("invalid target type")
 	}
 
-	if js, err := json.Marshal(target); err != nil {
+	js, err := json.Marshal(target)
+	if err != nil {
 		return err
-	} else {
-		return os.WriteFile(name+".json", js, 0o666)
 	}
-
+	name = name + ".json"
+	if err := os.WriteFile(name, js, 0o666); err != nil {
+		return err
+	}
+	// get current working directory
+	wd, err := os.Getwd()
+	if err != nil {
+		// we can't get the current working directory, but the file was written successfully (in theory).
+		// so just return nil without printing the path
+		return nil
+	}
+	log.Info().Msgf("dumped to: %s", filepath.Join(wd, name))
+	return nil
 }
 
 // cmdLoad imports a target JSON object and attempts to apply it to an existing object

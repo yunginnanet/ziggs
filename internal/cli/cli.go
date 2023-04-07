@@ -34,7 +34,7 @@ func executor(cmd string) {
 	var status = 0
 	defer func() {
 		if r := recover(); r != nil {
-			log.Error().Caller().Msgf("PANIC: %s", r)
+			log.Error().Caller(3).Msgf("PANIC: %s", r)
 		}
 		if _, ok := noHist[cmd]; !ok && status == 0 {
 			history = append(history, cmd)
