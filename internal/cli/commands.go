@@ -224,6 +224,38 @@ func cmdDelete(br *ziggy.Bridge, args []string) error {
 	return nil
 }
 
+// cp <light> <group>
+// dump the json for a group, then create a new group that adopts only the lights, then add our light id to the new group
+// then use update to push the new group to the bridge
+func cmdCp(br *ziggy.Bridge, args []string) error {
+	if len(args) < 2 {
+		return errors.New("not enough arguments")
+	}
+	var (
+		targetLight *ziggy.HueLight
+		targetGroup *ziggy.HueGroup
+		err         error
+	)
+	if targetLight, err = br.FindLight(args[0]); err != nil {
+		return err
+	}
+	if targetGroup, err = br.FindGroup(args[1]); err != nil {
+		return err
+	}
+	// dump the group
+	var resp *huego.Response
+	if resp, err = br.UpdateGroup(targetGroup.ID, huego.Group{
+		Name:   targetGroup.Name,
+		ID:     targetGroup.ID,
+		Lights: append(targetGroup.Lights, strconv.Itoa(targetLight.ID)),
+	}); err != nil {
+		return err
+	}
+	log.Info().Msgf("updated group %s to include light %s", targetGroup.Name, targetLight.Name)
+	log.Trace().Msgf("%v", spew.Sprint(resp))
+	return nil
+}
+
 func cmdRename(br *ziggy.Bridge, args []string) error {
 	if len(args) < 3 {
 		return errors.New("not enough arguments")

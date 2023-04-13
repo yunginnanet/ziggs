@@ -101,6 +101,7 @@ func init() {
 	Commands["scan"] = newZiggsCommand(cmdScan, "scan for bridges/lights/sensors", 0,
 		"search", "find")
 	Commands["rename"] = newZiggsCommand(cmdRename, "rename object in bridge", 3, "mv")
+	Commands["cp"] = newZiggsCommand(cmdCp, "copy object pointer to a new group", 2, "copy")
 	Commands["adopt"] = newZiggsCommand(cmdAdopt, "adopt new lights to the bridge", 0)
 	Commands["dump"] = newZiggsCommand(cmdDump, "dump target object JSON to a file", 1)
 	Commands["load"] = newZiggsCommand(cmdLoad, "load JSON from a file into the bridge", 1)
