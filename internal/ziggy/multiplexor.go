@@ -58,6 +58,30 @@ func GetGroupMap() map[string]*HueGroup {
 	return groupMap
 }
 
+func GetSensorMap() map[string]*HueSensor {
+	var sensorMap = make(map[string]*HueSensor)
+	for _, c := range Lucifer.Bridges {
+		ss, err := c.GetSensors()
+		if err != nil {
+			log.Warn().Msgf("error getting groups on bridge %s: %v", c.ID, err)
+			continue
+		}
+		for _, s := range ss {
+			sensor, gerr := c.GetSensor(s.ID)
+			if gerr != nil {
+				log.Warn().Msgf("failed to get pointer for sensor %s on bridge %s: %v", s.Name, c.ID, gerr)
+				continue
+			}
+			if _, ok := sensorMap[s.Name]; ok {
+				log.Warn().Msgf("duplicate sensor name %s on bridge %s - please rename", s.Name, c.ID)
+				continue
+			}
+			sensorMap[s.Name] = &HueSensor{Sensor: sensor, controller: c}
+		}
+	}
+	return sensorMap
+}
+
 func GetSceneMap() map[string]*HueScene {
 	var sceneMap = make(map[string]*HueScene)
 	for _, c := range Lucifer.Bridges {

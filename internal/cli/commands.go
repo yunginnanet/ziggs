@@ -277,7 +277,7 @@ func cmdRename(br *ziggy.Bridge, args []string) error {
 	case "rule":
 		return errors.New("not implemented")
 	case "sensor":
-		return errors.New("not implemented")
+		target, err = br.FindSensor(args[1])
 	default:
 		return errors.New("invalid target type")
 	}

@@ -25,16 +25,14 @@ var log *zerolog.Logger
 var errNoBridges = errors.New("no bridges available")
 
 type Meta struct {
-	Bridges  map[string]*Bridge
-	Switches map[string]*huego.Sensor
+	Bridges map[string]*Bridge
 	*sync.RWMutex
 }
 
 // Lucifer is the lightbringer.
 var Lucifer = Meta{
-	Bridges:  make(map[string]*Bridge),
-	Switches: make(map[string]*huego.Sensor),
-	RWMutex:  &sync.RWMutex{},
+	Bridges: make(map[string]*Bridge),
+	RWMutex: &sync.RWMutex{},
 }
 
 // Bridge represents a zigbee light controller. Just hue for now.
@@ -56,6 +54,17 @@ func (c *Bridge) Run(e *zerolog.Event, level zerolog.Level, msg string) {
 
 func (c *Bridge) Log() *zerolog.Logger {
 	return c.log
+}
+
+type HueSensor struct {
+	*huego.Sensor
+	controller *Bridge
+}
+
+func (hs *HueSensor) Rename(name string) error {
+	hnew := &huego.Sensor{Name: name}
+	_, err := hs.controller.UpdateSensor(hs.ID, hnew)
+	return err
 }
 
 type HueLight struct {

@@ -40,6 +40,23 @@ func (c *Bridge) FindGroup(input string) (light *HueGroup, err error) {
 	return &HueGroup{Group: hg, controller: c}, nil
 }
 
+func (c *Bridge) FindSensor(input string) (light *HueSensor, err error) {
+	var sensorID int
+	if sensorID, err = strconv.Atoi(input); err != nil {
+		targ, ok := GetSensorMap()[input]
+		if !ok {
+			return nil, fmt.Errorf("unable to resolve light ID from input: %s", input)
+		}
+		return targ, nil
+	}
+	var hs *huego.Sensor
+	if hs, err = c.GetSensor(sensorID); err != nil {
+		return nil, err
+	}
+
+	return &HueSensor{Sensor: hs, controller: c}, nil
+}
+
 func (hg *HueGroup) Scenes() ([]*HueScene, error) {
 	scenes, err := hg.controller.GetScenes()
 	if err != nil {
