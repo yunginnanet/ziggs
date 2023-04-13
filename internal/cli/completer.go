@@ -27,7 +27,6 @@ type completion struct {
 func (c completion) qualifies(line string) bool {
 	args, err := shlex.Split(line)
 	if err != nil {
-		log.Warn().Err(err).Msg("shlex.Split failed")
 		return false
 	}
 

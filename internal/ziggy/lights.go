@@ -273,15 +273,6 @@ func toggle(l *HueLight, mode ToggleMode) error {
 	return err
 }
 
-func ToggleLights(Lights []*HueLight, mode ToggleMode) {
-	for _, l := range Lights {
-		err := toggle(l, mode)
-		if err != nil {
-			log.Error().Err(err).Bool("On", l.IsOn()).Msg("failed to toggle light")
-		}
-	}
-}
-
 func (c *Bridge) getLights() error {
 	var l []*HueLight
 

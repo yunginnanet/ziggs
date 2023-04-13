@@ -166,7 +166,9 @@ func main() {
 				log.Info().Msg("starting event client")
 				defer log.Warn().Msg("event client stopped")
 				for e := range evch {
-					println(e)
+					e = strings.TrimPrefix(e, "data: ")
+					os.Stdout.WriteString(e)
+					os.Stdout.WriteString("\n")
 				}
 			}()
 			evc := haptic.NewEventClient()
