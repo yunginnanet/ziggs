@@ -9,7 +9,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/amimof/huego"
+	"github.com/yunginnanet/huego"
 
 	"git.tcp.direct/kayos/ziggs/internal/ziggy"
 )
@@ -24,6 +24,7 @@ func cmdGet(bridge *ziggy.Bridge, args []string) error {
 		groupMap     map[string]*ziggy.HueGroup
 		lightMap     map[string]*ziggy.HueLight
 		currentState *huego.State
+		otherDetails any
 		argHead      = -1
 	)
 
@@ -48,6 +49,7 @@ func cmdGet(bridge *ziggy.Bridge, args []string) error {
 				args[argHead], argHead,
 			)
 			currentState = g.State
+			otherDetails = &g.Lights
 		case "light", "l":
 			lightMap = ziggy.GetLightMap()
 			if len(args) <= argHead-1 {
@@ -75,6 +77,13 @@ func cmdGet(bridge *ziggy.Bridge, args []string) error {
 		return err
 	}
 	data = append(data, '\n')
+	if otherDetails != nil {
+		other, err := json.MarshalIndent(otherDetails, "", "\t")
+		if err != nil {
+			return err
+		}
+		data = append(data, other...)
+	}
 	_, err = io.Copy(os.Stdout, bytes.NewReader(data))
 	return err
 }

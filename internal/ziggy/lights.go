@@ -11,7 +11,7 @@ import (
 	"sync"
 
 	"git.tcp.direct/kayos/common/entropy"
-	"github.com/amimof/huego"
+	"github.com/yunginnanet/huego"
 	tui "github.com/manifoldco/promptui"
 	"github.com/rs/zerolog"
 	"golang.org/x/net/proxy"

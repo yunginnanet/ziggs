@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"git.tcp.direct/kayos/common/squish"
-	"github.com/amimof/huego"
+	"github.com/yunginnanet/huego"
 	"github.com/manifoldco/promptui"
 	"github.com/rs/zerolog"
 
@@ -62,9 +62,9 @@ func init() {
 func TurnAll(Known []*ziggy.Bridge, mode ziggy.ToggleMode) {
 	for _, bridge := range Known {
 		for _, l := range ziggy.GetLightMap() {
-			go func(l *ziggy.HueLight) {
+			go func(l *ziggy.HueLight, b *ziggy.Bridge) {
 				log.Debug().
-					Str("caller", bridge.Host).
+					Str("caller", b.Host).
 					Str("type", l.ProductName).
 					Bool("on", l.IsOn()).Msg(l.ModelID)
 				ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(5*time.Second))
@@ -73,7 +73,7 @@ func TurnAll(Known []*ziggy.Bridge, mode ziggy.ToggleMode) {
 					log.Error().Err(err).Msg("failed to assert state")
 				}
 				defer cancel()
-			}(l)
+			}(l, bridge)
 		}
 	}
 }

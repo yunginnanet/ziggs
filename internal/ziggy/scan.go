@@ -12,7 +12,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/amimof/huego"
+	"github.com/yunginnanet/huego"
 	tui "github.com/manifoldco/promptui"
 	"go4.org/netipx"
 

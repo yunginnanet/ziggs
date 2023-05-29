@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/amimof/huego"
+	"github.com/yunginnanet/huego"
 	"github.com/davecgh/go-spew/spew"
 
 	"git.tcp.direct/kayos/ziggs/internal/ziggy"

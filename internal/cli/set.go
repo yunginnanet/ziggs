@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/amimof/huego"
+	"github.com/yunginnanet/huego"
 
 	"git.tcp.direct/kayos/ziggs/internal/common"
 	"git.tcp.direct/kayos/ziggs/internal/ziggy"

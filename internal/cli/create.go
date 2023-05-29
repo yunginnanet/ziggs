@@ -3,8 +3,9 @@ package cli
 import (
 	"errors"
 	"strconv"
+	"strings"
 
-	"github.com/amimof/huego"
+	"github.com/yunginnanet/huego"
 
 	"git.tcp.direct/kayos/ziggs/internal/ziggy"
 )
@@ -21,15 +22,25 @@ func cmdCreate(br *ziggy.Bridge, args []string) error {
 			groupType = "LightGroup"
 			class     = ""
 		)
-		for _, arg := range args {
+		log.Debug().Msgf("creating group: %s", name)
+		for i, arg := range args {
 			switch arg {
 			case "group", name:
 				continue
 			case "-entertainment":
 				groupType = "Entertainment"
 				class = "Other"
+				log.Debug().Msgf("group type: %s", groupType)
+				log.Debug().Msgf("group class: %s", class)
 				continue
 			}
+			if strings.Contains(arg, ",") {
+				log.Debug().Msgf("found comma in arg %d, splitting argument by commas and remaking arg list", i)
+				args = append(args[:i], strings.Split(arg, ",")...)
+				log.Debug().Msgf("new args: %v", args)
+				continue
+			}
+
 			_, err := strconv.Atoi(arg)
 			if err != nil {
 				return err

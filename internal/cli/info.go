@@ -1,7 +1,7 @@
 package cli
 
 import (
-	"github.com/amimof/huego"
+	"github.com/yunginnanet/huego"
 
 	"git.tcp.direct/kayos/ziggs/internal/ziggy"
 )

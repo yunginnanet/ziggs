@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/amimof/huego"
+	"github.com/yunginnanet/huego"
 )
 
 func (c *Bridge) FindLight(input string) (light *HueLight, err error) {

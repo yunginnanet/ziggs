@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/amimof/huego"
+	"github.com/yunginnanet/huego"
 	"github.com/lucasb-eyer/go-colorful"
 
 	"git.tcp.direct/kayos/ziggs/internal/common"
