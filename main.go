@@ -10,9 +10,9 @@ import (
 	"time"
 
 	"git.tcp.direct/kayos/common/squish"
-	"github.com/yunginnanet/huego"
 	"github.com/manifoldco/promptui"
 	"github.com/rs/zerolog"
+	"github.com/yunginnanet/huego"
 
 	"git.tcp.direct/kayos/ziggs/internal/cli"
 	"git.tcp.direct/kayos/ziggs/internal/common"
@@ -43,8 +43,8 @@ func aesthetic() {
 	if len(Version) > 18 {
 		index = 18
 	}
-	log.Info().Str("version", Version[:index]).Send()
-	log.Info().Str("built", compileTime).Send()
+	log.Debug().Str("version", Version[:index]).Send()
+	log.Debug().Str("built", compileTime).Send()
 }
 
 func init() {
@@ -151,6 +151,14 @@ func main() {
 		log.Fatal().Err(err).Msg("failed to get bridges")
 	}
 
+	log = config.GetLogger()
+	cli.ProcessBridges()
+	go func() {
+		cli.ProcessGroups(ziggy.GetGroupMap())
+		cli.ProcessLights(ziggy.GetLightMap())
+		cli.ProcessScenes(ziggy.GetSceneMap())
+	}()
+
 	data.Start()
 	defer data.Close()
 
@@ -158,7 +166,7 @@ func main() {
 		cli.StartCLI()
 	}
 
-	for _, arg := range os.Args {
+	for i, arg := range os.Args {
 		switch arg {
 		case "events":
 			evch := make(chan string, 10)
@@ -171,6 +179,7 @@ func main() {
 					os.Stdout.WriteString("\n")
 				}
 			}()
+
 			evc := haptic.NewEventClient()
 			evc.Subscribe("*", evch)
 			if err = evc.Start(config.KnownBridges[0].Hostname, config.KnownBridges[0].Username); err != nil &&
@@ -194,8 +203,7 @@ func main() {
 			log.Debug().Msg("executing " + arg)
 			if len(os.Args) < 2 {
 				for _, k := range Known {
-					ctx := context.TODO()
-					FindLights(ctx, k)
+					FindLights(context.TODO(), k)
 				}
 			}
 		case "shell":
@@ -212,6 +220,9 @@ func main() {
 				sensptr = append(sensptr, &s)
 			}
 			selSensor(sensptr)
+		case "--":
+			log.Debug().Msg("executing " + strings.Join(os.Args[i+1:], " "))
+			cli.Executor(strings.Join(os.Args[i+1:], " "))
 		}
 	}
 

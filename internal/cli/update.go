@@ -5,8 +5,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/yunginnanet/huego"
 	"github.com/davecgh/go-spew/spew"
+	"github.com/yunginnanet/huego"
 
 	"git.tcp.direct/kayos/ziggs/internal/ziggy"
 )
@@ -44,7 +44,7 @@ func cmdFirmwareUpdate(br *ziggy.Bridge, args []string) error {
 	if err != nil {
 		return err
 	}
-	log.Trace().Msgf("new bridge update state:\n%s", spew.Sdump(cNew.SwUpdate2))
+	log.Trace().Caller().Msgf("new bridge update state:\n%s", spew.Sdump(cNew.SwUpdate2))
 	log.Info().Msgf("New software version: %s", c.SwVersion)
 	log.Info().Msgf("New update state: %v", c.SwUpdate2.State)
 	return err

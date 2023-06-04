@@ -3,16 +3,24 @@ package cli
 import (
 	cli "git.tcp.direct/Mirrors/go-prompt"
 
+	"git.tcp.direct/kayos/ziggs/internal/config"
 	"git.tcp.direct/kayos/ziggs/internal/ziggy"
 )
 
-func processGroups(grps map[string]*ziggy.HueGroup) {
+func init() {
+	go func() {
+		log = config.GetLogger()
+	}()
+}
+
+func ProcessGroups(grps map[string]*ziggy.HueGroup) {
 	for grp, g := range grps {
+		log.Trace().Caller().Msgf("Processing group %s", grp)
 		suffix := ""
 		if g.Type != "" {
 			suffix = " (" + g.Type + ")"
 		}
-		suggestionMutex.Lock()
+		SuggestionMutex.Lock()
 		suggestions[2][grp] = &completion{
 			Suggest: cli.Suggest{
 				Text:        grp,
@@ -24,17 +32,18 @@ func processGroups(grps map[string]*ziggy.HueGroup) {
 			},
 			root: false,
 		}
-		suggestionMutex.Unlock()
+		SuggestionMutex.Unlock()
 	}
 }
 
-func processScenes(scns map[string]*ziggy.HueScene) {
+func ProcessScenes(scns map[string]*ziggy.HueScene) {
 	for scn, s := range scns {
+		log.Trace().Caller().Msgf("Processing scene %s", scn)
 		suffix := ""
 		if s.Type != "" {
 			suffix = " (" + s.Type + ")"
 		}
-		suggestionMutex.Lock()
+		SuggestionMutex.Lock()
 		suggestions[4][scn] = &completion{
 			Suggest: cli.Suggest{
 				Text:        scn,
@@ -47,7 +56,7 @@ func processScenes(scns map[string]*ziggy.HueScene) {
 			},
 			callback: func(args []string) bool {
 				if extraDebug {
-					log.Trace().Msgf("Checking if scene %s belongs to group %s, their group is %s",
+					log.Trace().Caller().Msgf("Checking if scene %s belongs to group %s, their group is %s",
 						s.Name, args[3], s.Group)
 				}
 				if len(args) < 4 {
@@ -61,7 +70,7 @@ func processScenes(scns map[string]*ziggy.HueScene) {
 					return false
 				case args[1] == "group" || args[1] == "g":
 					if extraDebug {
-						log.Trace().Msgf("Checking if group %s is %s", args[3], s.Group)
+						log.Trace().Caller().Msgf("Checking if group %s is %s", args[3], s.Group)
 					}
 					if args[3] == s.Group {
 						return true
@@ -73,17 +82,18 @@ func processScenes(scns map[string]*ziggy.HueScene) {
 			},
 			root: false,
 		}
-		suggestionMutex.Unlock()
+		SuggestionMutex.Unlock()
 	}
 }
 
-func processLights(lghts map[string]*ziggy.HueLight) {
+func ProcessLights(lghts map[string]*ziggy.HueLight) {
 	for lt, l := range lghts {
+		log.Trace().Caller().Msgf("Processing light %s", lt)
 		suffix := ""
 		if l.Type != "" {
 			suffix = " (" + l.Type + ")"
 		}
-		suggestionMutex.Lock()
+		SuggestionMutex.Lock()
 		suggestions[2][lt] = &completion{
 			Suggest: cli.Suggest{
 				Text:        lt,
@@ -95,13 +105,14 @@ func processLights(lghts map[string]*ziggy.HueLight) {
 			},
 			root: false,
 		}
-		suggestionMutex.Unlock()
+		SuggestionMutex.Unlock()
 	}
 }
 
-func processBridges() {
+func ProcessBridges() {
 	for brd, b := range ziggy.Lucifer.Bridges {
-		suggestionMutex.Lock()
+		log.Trace().Caller().Msgf("Processing bridge %s", brd)
+		SuggestionMutex.Lock()
 		suggestions[1]["bridge"] = &completion{
 			Suggest: cli.Suggest{
 				Text:        brd,
@@ -110,6 +121,6 @@ func processBridges() {
 			requires: map[int]map[string]bool{0: {"use": true, "u": true}},
 			root:     false,
 		}
-		suggestionMutex.Unlock()
+		SuggestionMutex.Unlock()
 	}
 }

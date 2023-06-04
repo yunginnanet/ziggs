@@ -92,7 +92,7 @@ func setDefaults() {
 	Opt := make(map[string]map[string]interface{})
 	Opt["logger"] = map[string]interface{}{
 		"debug":             true,
-		"trace":             true,
+		"trace":             false,
 		"directory":         deflogdir,
 		"nocolor":           defNoColor,
 		"use_date_filename": true,

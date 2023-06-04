@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/yunginnanet/huego"
 	"github.com/davecgh/go-spew/spew"
+	"github.com/yunginnanet/huego"
 
 	"git.tcp.direct/kayos/ziggs/internal/ziggy"
 )
@@ -85,7 +85,7 @@ func cmdScenes(br *ziggy.Bridge, args []string) error {
 	for _, scene := range scenes {
 		log.Info().Str("caller", strings.Split(br.Host, "://")[1]).
 			Str("ID", scene.ID).Msgf("Scene: %s", scene.Name)
-		log.Trace().Msgf("%v", spew.Sprint(scene))
+		log.Trace().Caller().Msgf("%v", spew.Sprint(scene))
 	}
 	return nil
 }
@@ -95,7 +95,7 @@ func cmdLights(br *ziggy.Bridge, args []string) error {
 		log.Info().
 			Str("caller", strings.Split(br.Host, "://")[1]).Int("ID", l.ID).Str("type", l.ProductName).
 			Str("model", l.ModelID).Bool("on", l.IsOn()).Msgf("Light: %s", name)
-		log.Trace().Msgf("%v", spew.Sprint(l))
+		log.Trace().Caller().Msgf("%v", spew.Sprint(l))
 	}
 	return nil
 }
@@ -111,7 +111,7 @@ func cmdRules(br *ziggy.Bridge, args []string) error {
 	for _, r := range rules {
 		log.Info().Str("caller", strings.Split(br.Host, "://")[1]).Int("ID", r.ID).
 			Str("status", r.Status).Msgf("Rule: %s", r.Name)
-		log.Trace().Msgf("%v", spew.Sprint(r))
+		log.Trace().Caller().Msgf("%v", spew.Sprint(r))
 	}
 	return nil
 }
@@ -127,7 +127,7 @@ func cmdSchedules(br *ziggy.Bridge, args []string) error {
 	for _, s := range schedules {
 		log.Info().Str("caller", strings.Split(br.Host, "://")[1]).Int("ID", s.ID).
 			Str("desc", s.Description).Msgf("Schedule: %s", s.Name)
-		log.Trace().Msgf("%v", spew.Sprint(s))
+		log.Trace().Caller().Msgf("%v", spew.Sprint(s))
 	}
 	return nil
 }
@@ -143,7 +143,7 @@ func cmdSensors(br *ziggy.Bridge, args []string) error {
 	for _, s := range sensors {
 		log.Info().Str("caller", strings.Split(br.Host, "://")[1]).Int("ID", s.ID).
 			Str("type", s.Type).Msgf("Sensor: %s", s.Name)
-		log.Trace().Msgf("%v", spew.Sprint(s))
+		log.Trace().Caller().Msgf("%v", spew.Sprint(s))
 	}
 	return nil
 }
@@ -166,7 +166,7 @@ func cmdGroups(br *ziggy.Bridge, args []string) error {
 			}
 			log.Info().Msg("\t[" + strconv.Itoa(lght.ID) + "] " + lght.Name + " (" + lght.ProductName + ")")
 		}
-		log.Trace().Msgf("%v", spew.Sprint(g))
+		log.Trace().Caller().Msgf("%v", spew.Sprint(g))
 	}
 	return nil
 }
@@ -252,7 +252,7 @@ func cmdCp(br *ziggy.Bridge, args []string) error {
 		return err
 	}
 	log.Info().Msgf("updated group %s to include light %s", targetGroup.Name, targetLight.Name)
-	log.Trace().Msgf("%v", spew.Sprint(resp))
+	log.Trace().Caller().Msgf("%v", spew.Sprint(resp))
 	return nil
 }
 
@@ -373,6 +373,17 @@ func cmdDump(br *ziggy.Bridge, args []string) error {
 	return nil
 }
 
+func cmdGetFullState(br *ziggy.Bridge, args []string) error {
+	var err error
+	var fullstate map[string]interface{}
+	fullstate, err = br.GetFullState()
+	if err != nil {
+		return err
+	}
+	spew.Dump(fullstate)
+	return nil
+}
+
 // cmdLoad imports a target JSON object and attempts to apply it to an existing object
 func cmdLoad(br *ziggy.Bridge, args []string) error {
 	var js []byte
@@ -490,7 +501,7 @@ func cmdAdopt(br *ziggy.Bridge, args []string) error {
 	}
 	for _, l := range newLights.Lights {
 		log.Info().Msgf("[+] %s", l)
-		log.Trace().Msgf("%v", spew.Sprint(l))
+		log.Trace().Caller().Msgf("%v", spew.Sprint(l))
 	}
 	return nil
 }

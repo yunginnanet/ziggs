@@ -438,8 +438,8 @@ github.com/yuin/goldmark v1.2.1/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9dec
 github.com/yuin/goldmark v1.3.5/go.mod h1:mwnBkeHKe2W/ZEtQ+71ViKU8L12m81fl3OWwC1Zlc8k=
 github.com/yuin/goldmark v1.4.0/go.mod h1:mwnBkeHKe2W/ZEtQ+71ViKU8L12m81fl3OWwC1Zlc8k=
 github.com/yuin/goldmark v1.4.13/go.mod h1:6yULJ656Px+3vBD8DxQVa3kxgyrAnzto9xy5taEt/CY=
-github.com/yunginnanet/huego v1.2.2-0.20230529010539-d408ab817fd4 h1:ygkYBx4P1MZPuCLpCf4tVCGroemO5vLGpukwsOi5aQU=
-github.com/yunginnanet/huego v1.2.2-0.20230529010539-d408ab817fd4/go.mod h1:geoV/kOgrqHaEeT2QdOfqrvyTNSLs9JVN6Wzsk5zss0=
+github.com/yunginnanet/huego v1.2.2-0.20230529014403-8b8a50edf010 h1:hZYdjxY9hM/8e82rv8x0C56prvoBjLNWJToytTtxMEc=
+github.com/yunginnanet/huego v1.2.2-0.20230529014403-8b8a50edf010/go.mod h1:geoV/kOgrqHaEeT2QdOfqrvyTNSLs9JVN6Wzsk5zss0=
 go.etcd.io/bbolt v1.3.2/go.mod h1:IbVyRI1SCnLcuJnV2u8VeU0CEYM7e686BmAb1XKL+uU=
 go.etcd.io/etcd/api/v3 v3.5.0/go.mod h1:cbVKeC6lCfl7j/8jBhAK6aIYO9XOjdptoxU/nLQcPvs=
 go.etcd.io/etcd/client/pkg/v3 v3.5.0/go.mod h1:IJHfcCEKxYu1Os13ZdwCwIUTUVGYTSAM3YSwc9/Ac1g=

@@ -1,12 +1,16 @@
 package cli
 
 import (
+	"fmt"
 	"strings"
 	"sync"
+	"time"
 
 	cli "git.tcp.direct/Mirrors/go-prompt"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/google/shlex"
+
+	"git.tcp.direct/kayos/ziggs/internal/ziggy"
 )
 
 const (
@@ -81,7 +85,7 @@ func (c completion) qualifies(line string) bool {
 
 var (
 	suggestions     map[int]map[string]*completion
-	suggestionMutex = &sync.RWMutex{}
+	SuggestionMutex = &sync.RWMutex{}
 )
 
 func init() {
@@ -111,11 +115,23 @@ func init() {
 	Commands["info"] = newZiggsCommand(cmdInfo, "show information about a bridge", 0, "uname")
 	initCompletion()
 	Commands["reboot"] = newZiggsCommand(cmdReboot, "reboot bridge", 0)
+	Commands["get-full-state"] = newZiggsCommand(cmdGetFullState, "get full state from bridge", 0)
+	Commands["sleep"] = newZiggsCommand(func(br *ziggy.Bridge, args []string) error {
+		if len(args) < 1 {
+			return fmt.Errorf("sleep requires 1 argument")
+		}
+		d, err := time.ParseDuration(args[0])
+		if err != nil {
+			return err
+		}
+		time.Sleep(d)
+		return nil
+	}, "sleep for a specified number of seconds", 1)
 }
 
 func initCompletion() {
-	suggestionMutex.Lock()
-	defer suggestionMutex.Unlock()
+	SuggestionMutex.Lock()
+	defer SuggestionMutex.Unlock()
 
 	suggestions = make(map[int]map[string]*completion)
 	suggestions[0] = make(map[string]*completion)
@@ -198,8 +214,8 @@ func completer(in cli.Document) []cli.Suggest {
 		log.Trace().Int("head", head).Msgf("completing %v", infields)
 	}
 	var sugs []cli.Suggest
-	suggestionMutex.RLock()
-	defer suggestionMutex.RUnlock()
+	SuggestionMutex.RLock()
+	defer SuggestionMutex.RUnlock()
 	for _, sug := range suggestions[head] {
 		if !sug.qualifies(c) {
 			continue

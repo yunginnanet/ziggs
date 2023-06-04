@@ -19,7 +19,7 @@ require (
 	github.com/muesli/termenv v0.15.1
 	github.com/rs/zerolog v1.29.1
 	github.com/spf13/viper v1.15.0
-	github.com/yunginnanet/huego v1.2.2-0.20230529010539-d408ab817fd4
+	github.com/yunginnanet/huego v1.2.2-0.20230529014403-8b8a50edf010
 	go4.org/netipx v0.0.0-20230303233057-f1b76eb4bb35
 	golang.org/x/crypto v0.9.0
 	golang.org/x/net v0.10.0

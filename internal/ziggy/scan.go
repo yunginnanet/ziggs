@@ -12,8 +12,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/yunginnanet/huego"
 	tui "github.com/manifoldco/promptui"
+	"github.com/yunginnanet/huego"
 	"go4.org/netipx"
 
 	"git.tcp.direct/kayos/ziggs/internal/common"
@@ -110,7 +110,7 @@ func checkAddrs(ctx context.Context, addrs []net.Addr, working *int32, resChan c
 	var init = &sync.Once{}
 	log.Trace().Msg("checking addresses")
 	for _, a := range addrs {
-		log.Trace().Msgf("checking %s", a.String())
+		log.Trace().Caller().Msgf("checking %s", a.String())
 		rng := netipx.MustParseIPRange(a.String())
 		for ipa := rng.From(); ipa != rng.To(); ipa = ipa.Next() {
 			init.Do(func() { resChan <- &huego.Bridge{} })
@@ -127,7 +127,7 @@ func checkAddrs(ctx context.Context, addrs []net.Addr, working *int32, resChan c
 					break ctxLoop
 				}
 			}
-			log.Trace().Msgf("checking %s", ipa.String())
+			log.Trace().Caller().Msgf("checking %s", ipa.String())
 			atomic.AddInt32(working, 1)
 			go func(ip netip.Addr) {
 				resChan <- enumerateBridge(ip, ctx)

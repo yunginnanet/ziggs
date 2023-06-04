@@ -264,9 +264,9 @@ func cmdSet(bridge *ziggy.Bridge, args []string) error {
 	default:
 		return errors.New("unknown target")
 	}
-	log.Trace().Msgf("current state: %v", currentState)
+	log.Trace().Caller().Msgf("current state: %v", currentState)
 	for d, act := range actions {
-		log.Trace().Msgf("running action %d", d)
+		log.Trace().Caller().Msgf("running action %d", d)
 		err := act()
 		if err != nil {
 			return err
@@ -277,7 +277,7 @@ func cmdSet(bridge *ziggy.Bridge, args []string) error {
 		case tlok:
 			currentState = tl.State
 		}
-		log.Trace().Msgf("new state: %v", currentState)
+		log.Trace().Caller().Msgf("new state: %v", currentState)
 	}
 	return nil
 }

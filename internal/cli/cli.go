@@ -7,11 +7,10 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	cli "git.tcp.direct/Mirrors/go-prompt"
-	"github.com/davecgh/go-spew/spew"
-	tui "github.com/manifoldco/promptui"
 	"github.com/rs/zerolog"
 
 	"github.com/google/shlex"
@@ -30,7 +29,16 @@ var (
 var noHist = map[string]bool{"clear": true, "exit": true, "quit": true}
 
 // Interpret is where we will actuall define our Commands
-func executor(cmd string) {
+func Executor(cmd string) {
+	if log == nil {
+		log = config.StartLogger()
+	}
+
+	log.Trace().Caller().Msg("getting readlock for suggestions")
+	SuggestionMutex.RLock()
+	defer SuggestionMutex.RUnlock()
+	log.Trace().Caller().Msg("got readlock for suggestions")
+
 	var status = 0
 	defer func() {
 		if r := recover(); r != nil {
@@ -76,7 +84,7 @@ func executor(cmd string) {
 		}
 		sel.Bridge = args[1]
 		log.Info().Str("host", br.Host).Int("lights", len(br.HueLights)).Msg("switched to bridge: " + sel.Bridge)
-
+		return
 	case "debug":
 		levelsdebug := map[string]zerolog.Level{"info": zerolog.InfoLevel, "debug": zerolog.DebugLevel, "trace": zerolog.TraceLevel}
 		debuglevels := map[zerolog.Level]string{zerolog.InfoLevel: "info", zerolog.DebugLevel: "debug", zerolog.TraceLevel: "trace"}
@@ -94,8 +102,8 @@ func executor(cmd string) {
 				log.Info().Msg("disabled cli debug")
 			} else {
 				extraDebug = true
-				log.Info().Msgf("dumping suggestions")
-				spew.Dump(suggestions)
+				/*				log.Info().Msgf("dumping suggestions")
+								spew.Dump(suggestions)*/
 				log.Info().Msg("enabled cli debug")
 			}
 			return
@@ -109,43 +117,61 @@ func executor(cmd string) {
 		getHelp(args[len(args)-1])
 	case "clear":
 		print("\033[H\033[2J")
+		return
 	default:
 		if len(args) == 0 {
 			return
 		}
-		bcmd, ok := Commands[args[0]]
-		if !ok {
-			log.Error().Msg("invalid command: " + args[0])
-			status = 1
-			return
+
+		complete := strings.Join(args, " ")
+		log.Trace().Caller().Msgf("complete command: %s", complete)
+		if strings.Contains(complete, "&&") {
+			log.Warn().Caller().Msgf("found \"&&\" in command: %s, replacing with \";\"", complete)
+			strings.ReplaceAll(complete, "&&", ";")
 		}
+		sep := strings.Split(complete, "&")
+		log.Trace().Caller().Msgf("sep: %+s", sep)
+
 		br, ok := ziggy.Lucifer.Bridges[sel.Bridge]
 		if sel.Bridge == "" || !ok {
-			q := tui.Select{
-				Label:   "Send to all known bridges?",
-				Items:   []string{"yes", "no"},
-				Pointer: common.ZiggsPointer,
+			for _, b := range ziggy.Lucifer.Bridges {
+				br = ziggy.Lucifer.Bridges[b.Info.IPAddress]
+				break
 			}
-			_, ch, _ := q.Run()
-			if ch != "yes" {
-				return
-			}
-			for _, br := range ziggy.Lucifer.Bridges {
-				go func(brj *ziggy.Bridge) {
-					err := bcmd.reactor(brj, args[1:])
-					if err != nil {
-						log.Error().Err(err).Msg("bridge command failed")
-					}
-				}(br)
-			}
-			return
 		}
 
-		err := bcmd.reactor(br, args[1:])
-		if err != nil {
-			log.Error().Err(err).Msg("error executing command")
-			status = 1
+		wg := &sync.WaitGroup{}
+		for _, cm := range sep {
+			cm = strings.TrimSpace(cm)
+			log.Trace().Caller().Msgf("executing command: %s", cm)
+			wg.Add(1)
+			go func(c string) {
+				c = strings.TrimSpace(c)
+				defer wg.Done()
+				for _, synchro := range strings.Split(c, ";") {
+					synchro = strings.TrimSpace(synchro)
+					myArgs := strings.Split(synchro, " ")
+
+					bcmd, myok := Commands[myArgs[0]]
+					if !myok {
+						log.Error().Msg("invalid command: " + myArgs[0])
+						status = 1
+						return
+					}
+
+					log.Trace().Caller().Msgf("selected bridge: %s", sel.Bridge)
+
+					if e := bcmd.reactor(br, myArgs[1:]); e != nil {
+						log.Error().Msgf("error executing command: %s", e)
+						status = 1
+						return
+					}
+				}
+			}(cm)
 		}
+
+		wg.Wait()
+
 	}
 }
 
@@ -204,7 +230,7 @@ func loadHist() {
 			continue
 		default:
 			histMap[strings.TrimSpace(xerox.Text())] = true
-			history = append(history, xerox.Text())
+			history = append(history, strings.ReplaceAll(xerox.Text(), "_POUNDSIGN_", "#"))
 		}
 	}
 	histLoaded = true
@@ -224,18 +250,10 @@ func saveHist() {
 
 // func StartCLI(r io.Reader, w io.Writer) {
 func StartCLI() {
-	log = config.GetLogger()
-	processBridges()
-	go func() {
-		processGroups(ziggy.GetGroupMap())
-		processLights(ziggy.GetLightMap())
-		processScenes(ziggy.GetSceneMap())
-	}()
-	buildTime, _ := common.Version()
-
+	ct, _ := common.Version()
 	// cli.NewStdoutWriter().
 	prompt = cli.New(
-		executor,
+		Executor,
 		completer,
 		//		cli.OptionWriter(w),
 		//		cli.Op(r),
@@ -255,7 +273,8 @@ func StartCLI() {
 				}
 				return fmt.Sprintf("ziggs[%s] %s ", sel.String(), bulb), true
 			}),
-		cli.OptionTitle("ziggs - built "+buildTime),
+
+		cli.OptionTitle("ziggs - built "+ct),
 	)
 
 	prompt.Run()

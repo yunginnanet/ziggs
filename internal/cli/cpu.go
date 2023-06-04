@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/yunginnanet/huego"
 	"github.com/lucasb-eyer/go-colorful"
+	"github.com/yunginnanet/huego"
 
 	"git.tcp.direct/kayos/ziggs/internal/common"
 	"git.tcp.direct/kayos/ziggs/internal/system"
@@ -65,7 +65,7 @@ func cpuInit(argVal string, bridge *ziggy.Bridge, cpuTarget cmdTarget) error {
 				continue
 			}
 			cpuLastCol = clr.Hex()
-			log.Trace().Msgf("CPU load color: %v", clr.Hex())
+			log.Trace().Caller().Msgf("CPU load color: %v", clr.Hex())
 			cHex, cErr := common.ParseHexColorFast(clr.Hex())
 			if cErr != nil {
 				log.Error().Err(cErr).Msg("failed to parse color")
@@ -87,7 +87,7 @@ func cpuInit(argVal string, bridge *ziggy.Bridge, cpuTarget cmdTarget) error {
 			}
 			time.Sleep(750 * time.Millisecond)
 			cpuLastHue[head] = hue
-			// log.Trace().Msgf("CPU load hue: %v", hue)
+			// log.Trace().Caller().Msgf("CPU load hue: %v", hue)
 			target := lights[head]
 			newh := 65000 - hue
 			if newh < 1 {

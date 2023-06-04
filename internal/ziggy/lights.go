@@ -11,9 +11,9 @@ import (
 	"sync"
 
 	"git.tcp.direct/kayos/common/entropy"
-	"github.com/yunginnanet/huego"
 	tui "github.com/manifoldco/promptui"
 	"github.com/rs/zerolog"
+	"github.com/yunginnanet/huego"
 	"golang.org/x/net/proxy"
 
 	"git.tcp.direct/kayos/ziggs/internal/common"
@@ -148,7 +148,7 @@ func GetControllers(bridges []config.KnownBridge) (br []*Bridge) {
 			log.Error().Str("caller", lightConfig.Hostname).Err(err).Msg("unsuccessful connection")
 			continue
 		}
-		c.Log().Info().Str("caller", strings.Split(lightConfig.Hostname, "http://")[1]).Msg("connected")
+		c.Log().Debug().Str("caller", strings.Split(lightConfig.Hostname, "http://")[1]).Msg("connected")
 		br = append(br, c)
 	}
 	return

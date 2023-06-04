@@ -10,8 +10,8 @@ import (
 var tabber = tabwriter.NewWriter(os.Stdout, 0, 8, 1, '\t', tabwriter.AlignRight)
 
 func getHelp(target string) {
-	suggestionMutex.RLock()
-	defer suggestionMutex.RUnlock()
+	SuggestionMutex.RLock()
+	defer SuggestionMutex.RUnlock()
 
 	if target != "" && target != "meta" {
 		for _, su := range suggestions[0] {
@@ -31,7 +31,7 @@ func getHelp(target string) {
 			if su.inner.isAlias || su.isAlias {
 				su.isAlias = true
 				if extraDebug {
-					log.Trace().Msgf("alias: %s", su.Text)
+					log.Trace().Caller().Msgf("alias: %s", su.Text)
 				}
 			}
 		}
