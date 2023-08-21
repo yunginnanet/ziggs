@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"dario.cat/mergo"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/yunginnanet/huego"
 
@@ -53,6 +54,15 @@ func newZiggsCommand(react reactor, desc string, requires int, aliases ...string
 
 var Commands = make(map[string]*ziggsCommand)
 
+func cmdRefresh(br *ziggy.Bridge, args []string) error {
+	ziggy.NeedsUpdate()
+	ziggy.GetGroupMap()
+	ziggy.GetLightMap()
+	ziggy.GetSceneMap()
+	ziggy.GetSensorMap()
+	return nil
+}
+
 func cmdList(br *ziggy.Bridge, args []string) error {
 	var runs = []reactor{cmdLights, cmdGroups, cmdScenes, cmdSensors}
 	var cont = false
@@ -78,12 +88,33 @@ func cmdList(br *ziggy.Bridge, args []string) error {
 }
 
 func cmdScenes(br *ziggy.Bridge, args []string) error {
+	var targGroup *ziggy.HueGroup
+	if len(args) > 0 {
+		targGroup = ziggy.GetGroupMap()[args[0]]
+	}
 	scenes, err := br.GetScenes()
 	if err != nil {
 		return err
 	}
 	for _, scene := range scenes {
-		log.Info().Str("caller", strings.Split(br.Host, "://")[1]).
+		scGrNum, numErr := strconv.Atoi(scene.Group)
+		if numErr != nil {
+			continue
+		}
+		grp, gerr := br.GetGroup(scGrNum)
+		if gerr == nil {
+			scene.Group = grp.Name
+		}
+		if gerr == nil && targGroup != nil {
+			if targGroup.ID != scGrNum {
+				continue
+			}
+		}
+		/*for _, lstate := range scene.LightStates {
+			// lstate.
+		}*/
+
+		log.Info().Str("caller", scene.Group).
 			Str("ID", scene.ID).Msgf("Scene: %s", scene.Name)
 		log.Trace().Caller().Msgf("%v", spew.Sprint(scene))
 	}
@@ -175,6 +206,9 @@ func cmdDelete(br *ziggy.Bridge, args []string) error {
 	if len(args) < 2 {
 		return errors.New("not enough arguments")
 	}
+
+	defer ziggy.NeedsUpdate()
+
 	confirm := func() bool {
 		log.Info().Msgf("Are you sure you want to delete the %s identified as %s? [y/N]", args[0], args[1])
 		var input string
@@ -231,6 +265,9 @@ func cmdCp(br *ziggy.Bridge, args []string) error {
 	if len(args) < 2 {
 		return errors.New("not enough arguments")
 	}
+
+	defer ziggy.NeedsUpdate()
+
 	var (
 		targetLight *ziggy.HueLight
 		targetGroup *ziggy.HueGroup
@@ -267,6 +304,9 @@ func cmdRename(br *ziggy.Bridge, args []string) error {
 		target renameable
 		err    error
 	)
+
+	defer ziggy.NeedsUpdate()
+
 	switch args[0] {
 	case "light", "l":
 		target, err = br.FindLight(args[1])
@@ -287,6 +327,19 @@ func cmdRename(br *ziggy.Bridge, args []string) error {
 	return target.Rename(args[2])
 }
 
+type dumpTarget struct {
+	Name         string
+	Object       any
+	ParentFolder string
+}
+
+func newTarget(name string, obj any) dumpTarget {
+	return dumpTarget{
+		Name:   name,
+		Object: obj,
+	}
+}
+
 // cmdDump exports a target object to a JSON file
 func cmdDump(br *ziggy.Bridge, args []string) error {
 	if len(args) < 2 && args[0] != "all" && args[0] != "conf" && args[0] != "groups" &&
@@ -296,12 +349,13 @@ func cmdDump(br *ziggy.Bridge, args []string) error {
 		return errors.New("not enough arguments")
 	}
 	var (
-		target interface{}
-		name   string
-		err    error
+		targets []dumpTarget
+		err     error
 	)
 	switch args[0] {
 	case "light", "l":
+		var name string
+		var target any
 		target, err = br.FindLight(args[1])
 		if err != nil {
 			return err
@@ -312,65 +366,162 @@ func cmdDump(br *ziggy.Bridge, args []string) error {
 		} else {
 			name = lght.Name
 		}
+		targets = append(targets, newTarget(name, target))
 	case "group", "g":
-		target, err = br.FindGroup(args[1])
+		var target any
+		target, err = br.GetGroups()
 		if err != nil {
 			return err
 		}
-		name = target.(*ziggy.HueGroup).Name
+		for _, g := range target.([]huego.Group) {
+			if !strings.EqualFold(g.Name, args[1]) && !strings.EqualFold(strconv.Itoa(g.ID), args[1]) {
+				continue
+			}
+			targets = append(targets, newTarget(g.Name, g))
+		}
+	case "groups":
+		var target any
+		target, err = br.GetGroups()
+		if err != nil {
+			return err
+		}
+		for _, g := range target.([]huego.Group) {
+			targets = append(targets, newTarget(g.Name, g))
+		}
 	case "schedule":
-		return errors.New("not implemented")
-	case "rule":
-		return errors.New("not implemented")
-	case "rules":
-		target, err = br.GetRules()
-		if err != nil {
-			return err
-		}
-	case "scenes":
-		target, err = br.GetScenes()
-		if err != nil {
-			return err
-		}
-	case "schedules":
+		var target any
 		target, err = br.GetSchedules()
 		if err != nil {
 			return err
 		}
+		for _, s := range target.([]huego.Schedule) {
+			if !strings.EqualFold(s.Name, args[1]) && !strings.EqualFold(strconv.Itoa(s.ID), args[1]) {
+				continue
+			}
+			name := s.Name
+			targets = append(targets, newTarget(name, s))
+			break
+		}
+	case "rule":
+		var target any
+		target, err = br.GetRules()
+		if err != nil {
+			return err
+		}
+		for _, r := range target.([]huego.Rule) {
+			if !strings.EqualFold(r.Name, args[1]) && !strings.EqualFold(strconv.Itoa(r.ID), args[1]) {
+				continue
+			}
+			name := r.Name
+			targets = append(targets, newTarget(name, r))
+			break
+		}
+	case "rules":
+		var target any
+		target, err = br.GetRules()
+		if err != nil {
+			return err
+		}
+		name := "rules"
+		targets = append(targets, newTarget(name, target))
+	case "scenes":
+		var scenes []huego.Scene
+		scenes, err = br.GetScenes()
+		if err != nil {
+			return err
+		}
+		for _, s := range scenes {
+			var scene *huego.Scene
+			if scene, err = br.GetScene(s.ID); err != nil {
+				return err
+			}
+			var group *huego.Group
+			var num int
+			if num, err = strconv.Atoi(scene.Group); err != nil {
+				group = nil
+			}
+			group, err = br.GetGroup(num)
+			if err != nil {
+				group = nil
+			}
+
+			sc := newTarget(scene.Name, scene)
+			if group != nil {
+				sc.ParentFolder = group.Name
+			}
+
+			if mergo.Merge(&sc.Object, s); err != nil {
+				return err
+			}
+			targets = append(targets, sc)
+		}
+	case "schedules":
+		var target any
+		target, err = br.GetSchedules()
+		if err != nil {
+			return err
+		}
+		for _, s := range target.([]huego.Schedule) {
+			name := s.Name
+			targets = append(targets, newTarget(name, s))
+		}
 	case "sensor":
-		return errors.New("not implemented")
+		var target any
+		target, err = br.GetSensors()
+		if err != nil {
+			return err
+		}
+		for _, sensor := range target.([]huego.Sensor) {
+			name := sensor.Name
+			targets = append(targets, newTarget(name, sensor))
+		}
 	case "bridge", "all":
-		target = br
-		name = br.Info.Name
+		targets = append(targets, newTarget("bridge", br))
 	case "config":
 		var conf *huego.Config
 		conf, err = br.GetConfig()
 		if err != nil {
 			return err
 		}
-		target = conf
-		name = br.Info.BridgeID
+		name := br.Info.BridgeID
+		targets = append(targets, newTarget(name, conf))
 	default:
 		return errors.New("invalid target type")
 	}
 
-	js, err := json.Marshal(target)
-	if err != nil {
-		return err
+	for _, target := range targets {
+		var wd string
+		wd, err = os.Getwd()
+		if err != nil {
+			panic(err)
+		}
+		wd = filepath.Join(wd, "dump", args[0])
+		parentFolder := ""
+		if target.ParentFolder != "" {
+			targetDir := filepath.Join(wd, target.ParentFolder)
+			if err = os.MkdirAll(targetDir, 0o755); err != nil { // #nosec
+				return err
+			}
+			log.Info().Msgf("created folder: %s", targetDir)
+			parentFolder = target.ParentFolder
+		}
+		var js []byte
+		if js, err = json.Marshal(target.Object); err != nil {
+			return err
+		}
+		fpath := filepath.Join(wd, target.Name+".json")
+		if parentFolder != "" {
+			fpath = filepath.Join(wd, parentFolder, target.Name+".json")
+		}
+		if err = os.WriteFile(fpath, js, 0o666); err != nil {
+			return err
+		}
+		// get current working directory
+
+		log.Info().Msgf("dumped to: %s", fpath)
 	}
-	name = name + ".json"
-	if err := os.WriteFile(name, js, 0o666); err != nil {
-		return err
-	}
-	// get current working directory
-	wd, err := os.Getwd()
-	if err != nil {
-		// we can't get the current working directory, but the file was written successfully (in theory).
-		// so just return nil without printing the path
-		return nil
-	}
-	log.Info().Msgf("dumped to: %s", filepath.Join(wd, name))
 	return nil
+
 }
 
 func cmdGetFullState(br *ziggy.Bridge, args []string) error {
@@ -482,6 +633,7 @@ func cmdLoad(br *ziggy.Bridge, args []string) error {
 }
 
 func cmdAdopt(br *ziggy.Bridge, args []string) error {
+	defer ziggy.NeedsUpdate()
 	resp, err := br.FindLights()
 	if err != nil {
 		return err
@@ -507,6 +659,7 @@ func cmdAdopt(br *ziggy.Bridge, args []string) error {
 }
 
 func cmdReboot(br *ziggy.Bridge, args []string) error {
+	defer ziggy.NeedsUpdate()
 	resp, err := br.UpdateConfig(&huego.Config{Reboot: true})
 	if err != nil {
 		return err

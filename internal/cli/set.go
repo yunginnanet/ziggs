@@ -232,16 +232,17 @@ func cmdSet(bridge *ziggy.Bridge, args []string) error {
 				return ErrNotEnoughArguments
 			}
 			targetScene := strings.TrimSpace(args[argHead])
+			log.Debug().Msgf("target scene: %s", targetScene)
 			actions = append(actions, func() error {
-				err := target.Scene(targetScene)
-				if err != nil {
-					targetScene = ziggy.GetSceneMap()[targetScene].ID
-					err = target.Scene(targetScene)
-					if err != nil {
-						err = fmt.Errorf("failed to set scene: %w", err)
-					}
+				zhg := target.(*ziggy.HueGroup)
+				if zhg == nil {
+					return errors.New("target is not a group")
 				}
-				return err
+				if ts := ziggy.GetSceneMap()[targetScene]; ts != nil {
+					ts.Recall(zhg.ID)
+					return nil
+				}
+				return fmt.Errorf("scene %s not found", targetScene)
 			})
 
 		default:

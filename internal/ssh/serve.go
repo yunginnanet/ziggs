@@ -11,7 +11,6 @@ import (
 	"git.tcp.direct/kayos/common/squish"
 	"github.com/rs/zerolog"
 
-	"git.tcp.direct/kayos/ziggs/internal/cli"
 	"git.tcp.direct/kayos/ziggs/internal/config"
 
 	"github.com/charmbracelet/ssh"
@@ -47,7 +46,8 @@ func (s *Server) checkAuth(h ssh.Handler) ssh.Handler {
 
 func (s *Server) ziggssh(h ssh.Handler) ssh.Handler {
 	return func(ss ssh.Session) {
-		cli.StartCLI()
+		ss.
+			cli.StartCLI()
 		h(ss)
 	}
 }
@@ -64,7 +64,6 @@ func (s *Server) ListenAndServe() error {
 		wish.WithMiddleware(
 			logging.Middleware(),
 			s.checkAuth,
-
 		),
 	)
 	if err != nil {

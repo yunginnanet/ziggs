@@ -28,7 +28,7 @@ var (
 
 var noHist = map[string]bool{"clear": true, "exit": true, "quit": true}
 
-// Interpret is where we will actuall define our Commands
+// Executor executes commands
 func Executor(cmd string) {
 	if log == nil {
 		log = config.StartLogger()
@@ -94,6 +94,8 @@ func Executor(cmd string) {
 		}
 		if newlevel, ok := levelsdebug[args[1]]; ok {
 			zerolog.SetGlobalLevel(newlevel)
+			nl := log.Level(newlevel)
+			log = &nl
 			return
 		}
 		if args[1] == "debugcli" || args[1] == "cli" {

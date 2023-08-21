@@ -26,6 +26,7 @@ require (
 )
 
 require (
+	dario.cat/mergo v1.0.0 // indirect
 	dmitri.shuralyov.com/gpu/mtl v0.0.0-20201218220906-28db891af037 // indirect
 	gioui.org v0.0.0-20230404150518-c0d3f67b0468 // indirect
 	gioui.org/cpu v0.0.0-20210817075930-8d6a761490d2 // indirect

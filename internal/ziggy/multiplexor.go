@@ -8,8 +8,28 @@ type Multiplex struct {
 	bridges []*Bridge
 }
 
+var (
+	lightMap    map[string]*HueLight
+	groupMap    map[string]*HueGroup
+	sensorMap   map[string]*HueSensor
+	sceneMap    map[string]*HueScene
+	needsUpdate = 4
+)
+
+func NeedsUpdate() {
+	needsUpdate = 4
+}
+
 func GetLightMap() map[string]*HueLight {
-	var lightMap = make(map[string]*HueLight)
+	if needsUpdate == 0 {
+		return lightMap
+	}
+
+	defer func() {
+		needsUpdate--
+	}()
+
+	lightMap = make(map[string]*HueLight)
 	for _, c := range Lucifer.Bridges {
 		ls, err := c.GetLights()
 		if err != nil {
@@ -33,7 +53,15 @@ func GetLightMap() map[string]*HueLight {
 }
 
 func GetGroupMap() map[string]*HueGroup {
-	var groupMap = make(map[string]*HueGroup)
+	if needsUpdate == 0 {
+		return groupMap
+	}
+
+	defer func() {
+		needsUpdate--
+	}()
+
+	groupMap = make(map[string]*HueGroup)
 	for _, c := range Lucifer.Bridges {
 		gs, err := c.GetGroups()
 		if err != nil {
@@ -59,7 +87,15 @@ func GetGroupMap() map[string]*HueGroup {
 }
 
 func GetSensorMap() map[string]*HueSensor {
-	var sensorMap = make(map[string]*HueSensor)
+	if needsUpdate == 0 {
+		return sensorMap
+	}
+
+	defer func() {
+		needsUpdate--
+	}()
+
+	sensorMap = make(map[string]*HueSensor)
 	for _, c := range Lucifer.Bridges {
 		ss, err := c.GetSensors()
 		if err != nil {
@@ -83,7 +119,15 @@ func GetSensorMap() map[string]*HueSensor {
 }
 
 func GetSceneMap() map[string]*HueScene {
-	var sceneMap = make(map[string]*HueScene)
+	if needsUpdate == 0 {
+		return sceneMap
+	}
+
+	defer func() {
+		needsUpdate--
+	}()
+
+	sceneMap = make(map[string]*HueScene)
 	for _, c := range Lucifer.Bridges {
 		scs, err := c.GetScenes()
 		if err != nil {

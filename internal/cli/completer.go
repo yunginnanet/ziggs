@@ -89,6 +89,7 @@ var (
 )
 
 func init() {
+	Commands["refresh"] = newZiggsCommand(cmdRefresh, "refresh cached bridge data", 0)
 	Commands["ls"] = newZiggsCommand(cmdList, "list all lights, groups, scenes, rules, and schedules", 0)
 	Commands["schedules"] = newZiggsCommand(cmdSchedules, "list schedules", 0,
 		"lssched", "crontab")
